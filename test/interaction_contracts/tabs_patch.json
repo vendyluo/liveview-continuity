@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "continuity-tabs-survive-acknowledged-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-tabs"},
+  "activate": [
+    {"type": "click", "selector": "#fixture-tabs-tab-alpha"}
+  ],
+  "patch": {
+    "trigger": {"type": "click", "selector": "#tabs-patch"},
+    "ack": {
+      "type": "attribute_change",
+      "selector": "#fixture-tabs",
+      "attribute": "data-revision"
+    }
+  },
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-tabs-tab-bravo", "after": "same"},
+    {"probe": "attribute", "selector": "#fixture-tabs-tab-alpha", "attribute": "aria-selected", "before": {"value": "true"}, "after": {"value": "true"}}
+  ]
+}

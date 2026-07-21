@@ -11,7 +11,7 @@ defmodule LiveViewContinuity.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
       package: package(),
-      docs: [main: "readme", extras: ["README.md", "MENU.md", "CHANGELOG.md"]],
+      docs: [main: "readme", extras: ["README.md", "MENU.md", "TABS.md", "CHANGELOG.md"]],
       description: "Contract-backed, patch-safe interaction primitives for Phoenix LiveView."
     ]
   end
@@ -36,7 +36,7 @@ defmodule LiveViewContinuity.MixProject do
     [
       licenses: ["MIT"],
       links: %{},
-      files: ~w(lib mix.exs README.md MENU.md CHANGELOG.md LICENSE)
+      files: ~w(lib mix.exs README.md MENU.md TABS.md CHANGELOG.md LICENSE)
     ]
   end
 end

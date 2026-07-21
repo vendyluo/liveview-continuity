@@ -24,6 +24,108 @@ async function open(page, key = "ArrowDown") {
   await page.locator("#fixture-menu-popup").waitFor({state: "visible"});
 }
 
+async function runTabs(page) {
+  const root = page.locator("#fixture-tabs");
+  const tabs = root.locator("[data-lvc-tab]");
+  const panels = root.locator("[data-lvc-panel]");
+  assert.equal(await root.getAttribute("data-orientation"), "horizontal");
+  assert.equal(await root.locator("[role=tablist]").getAttribute("aria-orientation"), "horizontal");
+  assert.equal(await root.locator("[role=tablist]").getAttribute("aria-label"), "Fixture sections");
+  assert.equal(await root.getAttribute("aria-label"), null);
+
+  for (let i = 0; i < await tabs.count(); i++) {
+    const tab = tabs.nth(i);
+    const panel = page.locator(`#${await tab.getAttribute("aria-controls")}`);
+    assert.equal(await panel.count(), 1);
+    assert.equal(await panel.getAttribute("aria-labelledby"), await tab.getAttribute("id"));
+    const isSelected = await tab.getAttribute("aria-selected") === "true";
+    assert.equal(await panel.getAttribute("hidden"), isSelected ? null : "");
+    assert.equal(await panel.getAttribute("inert"), isSelected ? null : "");
+  }
+  assert.equal(await root.locator("[data-lvc-tab][aria-selected=true]").count(), 1);
+  assert.equal(await root.locator("[data-lvc-panel]:not([hidden])").count(), 1);
+  assert.equal(await root.locator("[data-lvc-tab][tabindex='0']").count(), 1);
+
+  const alpha = page.locator("#fixture-tabs-tab-alpha");
+  await alpha.focus();
+  const selected = async () => (await page.locator("#tabs-selected").textContent()).trim();
+  assert.equal(await selected(), "alpha");
+  await page.keyboard.press("ArrowRight");
+  await focusId(page, "fixture-tabs-tab-bravo");
+  assert.equal(await selected(), "alpha");
+  await page.keyboard.press("ArrowRight");
+  await focusId(page, "fixture-tabs-tab-charlie");
+  await page.keyboard.press("ArrowRight");
+  await focusId(page, "fixture-tabs-tab-alpha");
+  await page.keyboard.press("ArrowLeft");
+  await focusId(page, "fixture-tabs-tab-charlie");
+  await page.keyboard.press("Home");
+  await focusId(page, "fixture-tabs-tab-alpha");
+  await page.keyboard.press("End");
+  await focusId(page, "fixture-tabs-tab-charlie");
+  assert.equal(await selected(), "alpha");
+
+  const beforeDisabled = (await page.locator("#tabs-selections").textContent()).trim();
+  await page.locator("#fixture-tabs-tab-charlie").focus();
+  await page.locator("#fixture-tabs-tab-disabled").click({force: true});
+  await focusId(page, "fixture-tabs-tab-charlie");
+  assert.equal((await page.locator("#tabs-selections").textContent()).trim(), beforeDisabled);
+  assert.equal(await page.locator("#fixture-tabs-tab-disabled").getAttribute("tabindex"), "-1");
+
+  const beforeActivations = ((await page.locator("#tabs-selections").textContent()).trim().split(",").filter(Boolean)).length;
+  for (const mode of ["Enter", "Space", "click"]) {
+    await page.locator("#fixture-tabs-tab-bravo").focus();
+    const before = ((await page.locator("#tabs-selections").textContent()).trim().split(",").filter(Boolean)).length;
+    if (mode === "click") await page.locator("#fixture-tabs-tab-bravo").click();
+    else await page.keyboard.press(mode);
+    await page.waitForFunction(expected => document.querySelector("#tabs-selections").textContent.trim().split(",").filter(Boolean).length === expected, before + 1);
+    assert.equal(await selected(), "bravo");
+    assert.equal(await root.locator("[data-lvc-tab][aria-selected=true]").count(), 1);
+    assert.equal(await root.locator("[data-lvc-panel]:not([hidden])").count(), 1);
+  }
+
+  const bravoHandle = await page.locator("#fixture-tabs-tab-bravo").elementHandle();
+  await page.locator("#tabs-patch").evaluate(el => el.click());
+  await page.locator("#tabs-mode").filter({hasText: "patch"}).waitFor();
+  assert.equal(((await page.locator("#tabs-selections").textContent()).trim().split(",").filter(Boolean)).length, beforeActivations + 3);
+  await focusId(page, "fixture-tabs-tab-bravo");
+  assert.equal(await page.evaluate(([a, b]) => a === b, [bravoHandle, await page.locator("#fixture-tabs-tab-bravo").elementHandle()]), true);
+  await page.locator("#tabs-reorder").evaluate(el => el.click());
+  await page.locator("#tabs-mode").filter({hasText: "reorder"}).waitFor();
+  await focusId(page, "fixture-tabs-tab-bravo");
+  assert.match(await page.locator("#fixture-tabs-tab-bravo").textContent(), /renamed/);
+
+  await page.locator("#tabs-reset").click();
+  await page.locator("#fixture-tabs-tab-bravo").focus();
+  await page.locator("#tabs-remove-focused").evaluate(el => el.click());
+  await page.locator("#tabs-mode").filter({hasText: "remove-focused"}).waitFor();
+  await focusId(page, "fixture-tabs-tab-charlie");
+  assert.equal(await page.locator("#fixture-tabs-tab-bravo").count(), 0);
+
+  await page.locator("#tabs-reset").click();
+  await page.locator("#fixture-tabs-tab-charlie").focus();
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.querySelector("#tabs-selected").textContent.trim() === "charlie");
+  await page.locator("#tabs-remove-selected").evaluate(el => el.click());
+  await page.locator("#tabs-mode").filter({hasText: "remove-selected"}).waitFor();
+  assert.equal(await selected(), "alpha");
+  assert.equal(await page.locator("#fixture-tabs-tab-charlie").count(), 0);
+
+  await page.locator("#tabs-reset").click();
+  await page.locator("#tabs-panel-input").focus();
+  await page.locator("#tabs-patch").evaluate(el => el.click());
+  await page.locator("#tabs-mode").filter({hasText: "patch"}).waitFor();
+  await focusId(page, "tabs-panel-input");
+
+  await page.locator("#tabs-reset").click();
+  await page.locator("#tabs-outside").focus();
+  await page.locator("#tabs-reorder").evaluate(el => el.click());
+  await page.locator("#tabs-mode").filter({hasText: "reorder"}).waitFor();
+  await focusId(page, "tabs-outside");
+  assert.equal(await root.locator("[data-lvc-tab][tabindex='0']").count(), 1);
+  assert.equal(await page.locator("#fixture-tabs-tab-alpha").getAttribute("tabindex"), "0");
+}
+
 async function run(browserType, name, iteration) {
   const browser = await browserType.launch();
   const context = await browser.newContext();
@@ -188,6 +290,7 @@ async function run(browserType, name, iteration) {
       assert.equal(await page.locator("#fixture-menu-popup").isVisible(), false);
     }
 
+    await runTabs(page);
     console.log(`PASS ${name} context ${iteration}`);
   } finally {
     await context.close();

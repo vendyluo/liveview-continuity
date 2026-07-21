@@ -75,6 +75,17 @@ Client-owned reflections use stable `data-lvc-*` styling hooks. Only trigger `ar
 
 See [MENU.md](MENU.md) for the observable contract.
 
+## Tabs
+
+```heex
+<.tabs id="account-sections" value={@selected} on_select="select_section" label="Account sections">
+  <:tab id="profile" label="Profile">Profile content</:tab>
+  <:tab id="security" label="Security" disabled={@security_unavailable}>Security content</:tab>
+</.tabs>
+```
+
+Tabs are horizontal and manually activated. Left, Right, Home, and End move focus among enabled tabs without selecting. Enter, Space, or click sends exactly one `%{"id" => logical_id}` event. The server owns selection and all panels remain mounted; inactive panels are hidden and inert. The hook preserves the logical focus cursor through patches and reorder without stealing focus from outside the tab list. See [TABS.md](TABS.md) for the full contract.
+
 ## Non-scope
 
 The first slice intentionally excludes selection, check/radio items, submenus, portals, detached or multiple triggers, and a positioning engine. It also excludes a generic state machine, arbitrary JavaScript assertion API, component generator, CSS framework, and design tokens.
@@ -99,6 +110,7 @@ npm run test:browser
 mix live_interaction_contracts.check \
   --url http://127.0.0.1:4140 \
   --contract test/interaction_contracts/menu_patch.json
+# Run again with test/interaction_contracts/tabs_patch.json
 ```
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.
