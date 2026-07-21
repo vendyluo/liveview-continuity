@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "continuity-menu-survives-acknowledged-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-menu"},
+  "activate": [
+    {"type": "click", "selector": "#fixture-menu-trigger"}
+  ],
+  "patch": {
+    "trigger": {"type": "press", "selector": "#fixture-menu-item-patch", "key": "Enter"},
+    "ack": {
+      "type": "attribute_change",
+      "selector": "#fixture-menu",
+      "attribute": "data-revision"
+    }
+  },
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-menu-popup", "after": "same"},
+    {"probe": "popover", "selector": "#fixture-menu-popup", "before": {"open": true}, "after": {"open": true}}
+  ]
+}

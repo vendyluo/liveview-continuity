@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {"test:browser": "node playwright/conformance.mjs"},
+  "devDependencies": {
+    "esbuild": "0.25.6",
+    "playwright": "1.61.1"
+  }
+}

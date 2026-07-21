@@ -1,0 +1,10 @@
+/_build/
+/deps/
+/doc/
+/cover/
+/fixture/assets/node_modules/
+/node_modules/
+/playwright/node_modules/
+/playwright/test-results/
+/fixture/priv/static/assets/app.js
+erl_crash.dump
