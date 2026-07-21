@@ -88,6 +88,20 @@ Tabs are horizontal and manually activated. Left, Right, Home, and End move focu
 
 Large LiveViews may render `<.tab_list>` and matching `<.tab_panel>` components separately, so adopting the interaction contract does not require relocating existing panel content. The same stable root and logical IDs preserve the reciprocal ARIA graph.
 
+## Dialog
+
+```heex
+<.dialog id="delete-dialog" open={@dialog_open} on_open="open_dialog" on_close="close_dialog" initial_focus="#account-name">
+  <:trigger>Delete account</:trigger>
+  <:title>Delete account?</:title>
+  <:description>This action cannot be undone.</:description>
+  <input id="account-name" aria-label="Account name" />
+  <:close>Cancel</:close>
+</.dialog>
+```
+
+Dialog uses only native `showModal()`: the server owns desired `open` intent while the browser owns effective top-layer state and focus. Trigger and Close requests happen immediately and must be acknowledged by setting `open` to `true` or `false` in `on_open` and `on_close` respectively. Escape reports reason `escape`; explicit Close reports `close`. See [DIALOG.md](DIALOG.md) for focus fallback, patch continuity, scroll locking, and deferred features.
+
 ## Non-scope
 
 The first slice intentionally excludes selection, check/radio items, submenus, portals, detached or multiple triggers, and a positioning engine. It also excludes a generic state machine, arbitrary JavaScript assertion API, component generator, CSS framework, and design tokens.
@@ -112,7 +126,7 @@ npm run test:browser
 mix live_interaction_contracts.check \
   --url http://127.0.0.1:4140 \
   --contract test/interaction_contracts/menu_patch.json
-# Run again with test/interaction_contracts/tabs_patch.json
+# Run again with test/interaction_contracts/tabs_patch.json and dialog_patch.json
 ```
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.

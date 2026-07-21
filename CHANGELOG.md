@@ -4,3 +4,4 @@
 
 - Add the first vertical slice: an unstyled, action-only, patch-safe LiveView Menu.
 - Add the second vertical slice: unstyled, horizontal, manual-activation, patch-safe Tabs.
+- Add the third vertical slice: an unstyled, native-modal, patch-safe Dialog.

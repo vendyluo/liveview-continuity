@@ -10,6 +10,7 @@ cd "$ROOT"
 mix hex.build --unpack --output "$TMP/package" >/dev/null
 test -f "$TMP/package/lib/live_view_continuity/menu.ex"
 test -f "$TMP/package/lib/live_view_continuity/tabs.ex"
+test -f "$TMP/package/lib/live_view_continuity/dialog.ex"
 test ! -e "$TMP/package/fixture"
 test ! -e "$TMP/package/playwright"
 
@@ -34,6 +35,7 @@ cat > "$TMP/consumer/app.js" <<'EOF'
 import {hooks} from "phoenix-colocated/liveview_continuity";
 if (!hooks["LiveViewContinuity.Menu.Menu"]) throw new Error("Menu colocated hook missing");
 if (!hooks["LiveViewContinuity.Tabs.Tabs"]) throw new Error("Tabs colocated hook missing");
+if (!hooks["LiveViewContinuity.Dialog.Dialog"]) throw new Error("Dialog colocated hook missing");
 console.log("package hook ok");
 EOF
 

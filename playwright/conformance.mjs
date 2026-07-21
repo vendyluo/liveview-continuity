@@ -126,6 +126,128 @@ async function runTabs(page) {
   assert.equal(await page.locator("#fixture-tabs-tab-alpha").getAttribute("tabindex"), "0");
 }
 
+async function runDialog(page) {
+  const root = page.locator("#fixture-dialog");
+  const trigger = page.locator("#fixture-dialog-trigger");
+  const popup = page.locator("#fixture-dialog-popup");
+  const close = page.locator("#fixture-dialog-close");
+  assert.equal(await trigger.getAttribute("aria-controls"), "fixture-dialog-popup");
+  assert.equal(await popup.getAttribute("aria-labelledby"), "fixture-dialog-title");
+  assert.equal(await popup.getAttribute("aria-describedby"), "fixture-dialog-description");
+  assert.equal(await popup.getAttribute("open"), null);
+
+  const history = async id => (await page.locator(id).textContent()).trim().split(",").filter(Boolean);
+  const originalScrollStyle = await page.evaluate(() => ({overflow: document.documentElement.style.overflow, gutter: document.documentElement.style.scrollbarGutter}));
+  await page.evaluate(() => {
+    document.documentElement.style.overflow = "clip";
+    document.documentElement.style.scrollbarGutter = "stable both-edges";
+  });
+  const previousOverflow = await page.evaluate(() => document.documentElement.style.overflow);
+  const previousGutter = await page.evaluate(() => document.documentElement.style.scrollbarGutter);
+  await trigger.click();
+  await page.waitForFunction(() => document.querySelector("#fixture-dialog-popup").matches(":modal"));
+  assert.equal(await popup.getAttribute("open"), "");
+  assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+  assert.equal(await root.getAttribute("data-lvc-open"), "true");
+  await page.waitForFunction(() => document.querySelector("#dialog-opens").textContent.trim() === "open");
+  assert.deepEqual(await history("#dialog-opens"), ["open"]);
+  await focusId(page, "dialog-initial");
+  assert.equal(await page.evaluate(() => document.documentElement.style.overflow), "hidden");
+  assert.equal(await page.evaluate(() => document.documentElement.style.scrollbarGutter), "stable");
+
+  // Native inertness plus the Dialog-local first/last Tab boundary wrap.
+  await page.locator("#dialog-positive-first").focus();
+  await page.keyboard.press("Shift+Tab");
+  await focusId(page, "fixture-dialog-close");
+  await close.focus();
+  await page.keyboard.press("Tab");
+  await focusId(page, "dialog-positive-first");
+  await page.locator("#dialog-remove-positive").evaluate(el => el.click());
+  await page.locator("#dialog-positive-first").waitFor({state: "detached"});
+  await page.locator("#dialog-name").focus();
+  await page.keyboard.press("Shift+Tab");
+  await focusId(page, "fixture-dialog-close");
+  await close.focus();
+  await page.keyboard.press("Tab");
+  await focusId(page, "dialog-name");
+  const beforeBackgroundFocus = await page.evaluate(() => document.activeElement?.id);
+  await page.locator("#outside").focus();
+  assert.equal(await page.evaluate(() => document.activeElement?.id), beforeBackgroundFocus);
+  assert.equal(await popup.evaluate(el => el.contains(document.activeElement)), true);
+
+  await page.locator("#dialog-fake-close").evaluate(el => el.click());
+  assert.equal(await popup.evaluate(el => el.open), true);
+
+  const popupHandle = await popup.elementHandle();
+  const inputHandle = await page.locator("#dialog-name").elementHandle();
+  await page.locator("#dialog-name").focus();
+  await page.locator("#dialog-patch").evaluate(el => el.click());
+  await page.waitForFunction(() => document.querySelector("#fixture-dialog").dataset.revision === "1");
+  assert.equal(await page.evaluate(([a, b]) => a === b, [popupHandle, await popup.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [inputHandle, await page.locator("#dialog-name").elementHandle()]), true);
+  await focusId(page, "dialog-name");
+  assert.equal(await popup.evaluate(el => el.matches(":modal")), true);
+
+  await close.focus();
+  await page.locator("#dialog-patch").evaluate(el => el.click());
+  await page.waitForFunction(() => document.querySelector("#fixture-dialog").dataset.revision === "2");
+  await focusId(page, "fixture-dialog-close");
+
+  await page.locator("#dialog-remove-focus").evaluate(el => el.click());
+  await page.waitForFunction(() => !document.querySelector("#dialog-name"));
+  await page.waitForFunction(() => document.activeElement?.matches("[data-lvc-dialog-close]"));
+
+  await close.click();
+  await page.waitForFunction(() => !document.querySelector("#fixture-dialog-popup").open);
+  await page.waitForFunction(() => document.querySelector("#dialog-closes").textContent.trim() === "close");
+  assert.deepEqual(await history("#dialog-closes"), ["close"]);
+  assert.equal(await root.getAttribute("data-lvc-close-reason"), "close");
+  await focusId(page, "fixture-dialog-trigger");
+  assert.equal(await page.evaluate(() => document.documentElement.style.overflow), previousOverflow);
+  assert.equal(await page.evaluate(() => document.documentElement.style.scrollbarGutter), previousGutter);
+  await page.locator("#dialog-ack-close").click();
+  await page.locator("#fixture-dialog[data-lvc-desired-open='false']").waitFor();
+
+  await page.locator("#dialog-reset").click();
+  await page.locator("#dialog-name").waitFor({state: "attached"});
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await focusId(page, "dialog-initial");
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => !document.querySelector("#fixture-dialog-popup").open);
+  await page.waitForFunction(() => document.querySelector("#dialog-closes").textContent.trim() === "close,escape");
+  await focusId(page, "fixture-dialog-trigger");
+  assert.equal(await page.evaluate(() => document.documentElement.style.overflow), previousOverflow);
+  assert.equal(await page.evaluate(() => document.documentElement.style.scrollbarGutter), previousGutter);
+  const staleRevision = Number(await root.getAttribute("data-revision"));
+  await page.locator("#dialog-stale-patch").click();
+  await page.waitForFunction(expected => Number(document.querySelector("#fixture-dialog").dataset.revision) > expected, staleRevision);
+  assert.equal(await popup.evaluate(el => el.open), false);
+  assert.equal(await popup.evaluate(el => el.matches(":modal")), false);
+  assert.equal(await page.evaluate(() => document.documentElement.style.overflow), previousOverflow);
+  assert.equal(await page.evaluate(() => document.documentElement.style.scrollbarGutter), previousGutter);
+  assert.equal(await root.getAttribute("data-lvc-desired-open"), "true");
+  await page.locator("#dialog-ack-close").click();
+  await page.locator("#fixture-dialog[data-lvc-desired-open='false']").waitFor();
+  assert.deepEqual(await history("#dialog-closes"), ["close", "escape"]);
+
+  const opensBeforeServer = (await history("#dialog-opens")).length;
+  await page.locator("#dialog-server-open").click();
+  await page.waitForFunction(() => document.querySelector("#fixture-dialog-popup").matches(":modal"));
+  assert.equal((await history("#dialog-opens")).length, opensBeforeServer);
+  await focusId(page, "dialog-initial");
+  const closesBeforeServer = (await history("#dialog-closes")).length;
+  await page.locator("#dialog-server-close").evaluate(el => el.click());
+  await page.waitForFunction(() => !document.querySelector("#fixture-dialog-popup").open);
+  await page.waitForFunction(() => document.querySelector("#fixture-dialog").dataset.lvcOpen === "false");
+  assert.equal((await history("#dialog-closes")).length, closesBeforeServer);
+  assert.equal(await root.getAttribute("data-lvc-open"), "false");
+  await page.evaluate(original => {
+    document.documentElement.style.overflow = original.overflow;
+    document.documentElement.style.scrollbarGutter = original.gutter;
+  }, originalScrollStyle);
+}
+
 async function run(browserType, name, iteration) {
   const browser = await browserType.launch();
   const context = await browser.newContext();
@@ -291,6 +413,7 @@ async function run(browserType, name, iteration) {
     }
 
     await runTabs(page);
+    await runDialog(page);
     console.log(`PASS ${name} context ${iteration}`);
   } finally {
     await context.close();

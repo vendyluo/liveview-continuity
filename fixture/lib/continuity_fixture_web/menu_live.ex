@@ -2,6 +2,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
   use Phoenix.LiveView
   import LiveViewContinuity.Menu
   import LiveViewContinuity.Tabs
+  import LiveViewContinuity.Dialog
 
   @base_items [
     %{id: "alpha", label: "Álpha"},
@@ -32,7 +33,13 @@ defmodule ContinuityFixtureWeb.MenuLive do
        selected: "alpha",
        tab_revision: 0,
        tab_selections: [],
-       tab_mode: "base"
+       tab_mode: "base",
+       dialog_open: false,
+       dialog_revision: 0,
+       dialog_input: true,
+       dialog_positive: true,
+       dialog_opens: [],
+       dialog_closes: []
      )}
   end
 
@@ -96,6 +103,41 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <output id="tabs-mode">{@tab_mode}</output>
       <output id="tabs-selected">{@selected}</output>
       <output id="tabs-selections">{Enum.join(@tab_selections, ",")}</output>
+
+      <h2>Dialog fixture</h2>
+      <.dialog
+        id="fixture-dialog"
+        open={@dialog_open}
+        on_open="dialog_open"
+        on_close="dialog_close"
+        initial_focus="#dialog-initial"
+        data-revision={@dialog_revision}
+        data-lvc-dialog-trigger
+      >
+        <:trigger>Open dialog</:trigger>
+        <:title>Fixture dialog</:title>
+        <:description>Native modal conformance fixture</:description>
+        <h3 id="dialog-initial" tabindex="-1">Dialog content</h3>
+        <button id="dialog-fake-close" type="button" tabindex="-2" data-lvc-dialog-close>Not close</button>
+        <fieldset disabled>
+          <button id="dialog-disabled-positive" type="button" tabindex="1">Disabled positive</button>
+        </fieldset>
+        <input :if={@dialog_input} id="dialog-name" aria-label="Dialog name" />
+        <button id="dialog-second" type="button">Second control</button>
+        <button id="dialog-patch" type="button" phx-click="dialog_patch">Patch dialog</button>
+        <button id="dialog-remove-focus" type="button" phx-click="dialog_remove_focus">Remove focused input</button>
+        <button :if={@dialog_positive} id="dialog-positive-first" type="button" tabindex="1">Positive tab index</button>
+        <button id="dialog-remove-positive" type="button" phx-click="dialog_remove_positive">Remove positive tab index</button>
+        <:close>Close dialog</:close>
+      </.dialog>
+      <button id="dialog-server-open" phx-click="dialog_server_open">Server open</button>
+      <button id="dialog-server-close" phx-click="dialog_server_close">Server close</button>
+      <button id="dialog-stale-patch" phx-click="dialog_stale_patch">Stale patch</button>
+      <button id="dialog-ack-close" phx-click="dialog_ack_close">Acknowledge close</button>
+      <button id="dialog-reset" phx-click="dialog_reset">Reset dialog</button>
+      <output id="dialog-revision">{@dialog_revision}</output>
+      <output id="dialog-opens">{Enum.join(@dialog_opens, ",")}</output>
+      <output id="dialog-closes">{Enum.join(@dialog_closes, ",")}</output>
     </main>
     """
   end
@@ -191,6 +233,41 @@ defmodule ContinuityFixtureWeb.MenuLive do
        tab_revision: socket.assigns.tab_revision + 1,
        tab_mode: "reset"
      )}
+  end
+
+  def handle_event("dialog_open", _, socket) do
+    {:noreply,
+     assign(socket, dialog_open: true, dialog_opens: socket.assigns.dialog_opens ++ ["open"])}
+  end
+
+  def handle_event("dialog_close", %{"reason" => reason}, socket) do
+    {:noreply, update(socket, :dialog_closes, &(&1 ++ [reason]))}
+  end
+
+  def handle_event("dialog_patch", _, socket),
+    do: {:noreply, update(socket, :dialog_revision, &(&1 + 1))}
+
+  def handle_event("dialog_remove_focus", _, socket) do
+    {:noreply, socket |> assign(:dialog_input, false) |> update(:dialog_revision, &(&1 + 1))}
+  end
+
+  def handle_event("dialog_remove_positive", _, socket),
+    do: {:noreply, assign(socket, :dialog_positive, false)}
+
+  def handle_event("dialog_server_open", _, socket),
+    do: {:noreply, assign(socket, :dialog_open, true)}
+
+  def handle_event("dialog_server_close", _, socket),
+    do: {:noreply, assign(socket, :dialog_open, false)}
+
+  def handle_event("dialog_stale_patch", _, socket),
+    do: {:noreply, update(socket, :dialog_revision, &(&1 + 1))}
+
+  def handle_event("dialog_ack_close", _, socket),
+    do: {:noreply, assign(socket, :dialog_open, false)}
+
+  def handle_event("dialog_reset", _, socket) do
+    {:noreply, assign(socket, dialog_open: false, dialog_input: true, dialog_positive: true)}
   end
 
   defp revise(socket, items, mode) do

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "continuity-dialog-survives-acknowledged-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-dialog"},
+  "activate": [
+    {"type": "click", "selector": "#fixture-dialog-trigger"}
+  ],
+  "patch": {
+    "trigger": {"type": "click", "selector": "#dialog-patch"},
+    "ack": {
+      "type": "attribute_change",
+      "selector": "#fixture-dialog",
+      "attribute": "data-revision"
+    }
+  },
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-dialog-popup", "after": "same"},
+    {"probe": "dialog", "selector": "#fixture-dialog-popup", "before": {"open": true, "open_attribute": true, "modal": true}, "after": {"open": true, "open_attribute": true, "modal": true}}
+  ]
+}
