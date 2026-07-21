@@ -26,6 +26,15 @@ defmodule LiveViewContinuity.Menu do
   end
 
   def menu(assigns) do
+    assigns =
+      case assigns.trigger do
+        [trigger_entry] ->
+          assign(assigns, :trigger_entry, trigger_entry)
+
+        entries ->
+          raise ArgumentError, "menu requires exactly one trigger slot, got: #{length(entries)}"
+      end
+
     ~H"""
     <div
       id={@id}
@@ -33,19 +42,21 @@ defmodule LiveViewContinuity.Menu do
       phx-hook=".Menu"
       phx-mounted={JS.ignore_attributes(["data-lvc-open", "data-lvc-dismiss-reason"])}
       data-lvc-menu
+      data-lvc-open="false"
       data-lvc-action={@on_action}
       {@rest}
     >
       <button
         id={@id <> "-trigger"}
         type="button"
-        class={@trigger[:class]}
+        class={@trigger_entry[:class]}
         aria-haspopup="menu"
         aria-expanded="false"
         aria-controls={@id <> "-popup"}
         popovertarget={@id <> "-popup"}
+        phx-mounted={JS.ignore_attributes("aria-expanded")}
       >
-        {render_slot(@trigger)}
+        {render_slot(@trigger_entry)}
       </button>
       <div
         id={@id <> "-popup"}
@@ -84,6 +95,7 @@ defmodule LiveViewContinuity.Menu do
             this.buffer = "";
             this.bufferTimer = null;
             this.collator = new Intl.Collator(undefined, {usage: "search", sensitivity: "base"});
+            this.pendingDismissReason = null;
             this.onTriggerKey = event => this.triggerKey(event);
             this.onPopupKey = event => this.popupKey(event);
             this.onPopupClick = event => this.popupClick(event);
@@ -178,32 +190,54 @@ defmodule LiveViewContinuity.Menu do
           },
           close(reason, restore) {
             const popup = this.popup();
-            clearTimeout(this.bufferTimer);
-            this.buffer = "";
-            this.el.dataset.lvcDismissReason = reason;
+            this.pendingDismissReason = reason;
             if (popup.matches(":popover-open")) popup.hidePopover();
-            this.activeId = null;
-            this.items().forEach(item => { item.tabIndex = -1; delete item.dataset.lvcActive; });
+            else {
+              this.el.dataset.lvcOpen = "false";
+              this.el.dataset.lvcDismissReason = reason;
+              this.trigger().setAttribute("aria-expanded", "false");
+              this.pendingDismissReason = null;
+              this.resetInteraction();
+            }
             if (restore) this.trigger().focus();
+          },
+          beforeToggle(event) {
+            const opening = event.newState === "open";
+            this.el.dataset.lvcOpen = String(opening);
+            this.trigger().setAttribute("aria-expanded", String(opening));
+            if (opening) {
+              delete this.el.dataset.lvcDismissReason;
+              this.pendingDismissReason = null;
+              queueMicrotask(() => {
+                if (!this.popup().matches(":popover-open") || this.activeId) return;
+                const first = this.items()[0];
+                if (first) this.focusItem(first); else this.close("empty", true);
+              });
+              return;
+            }
+            const reason = this.pendingDismissReason || (event.source === this.trigger() ? "trigger" : "outside");
+            this.el.dataset.lvcDismissReason = reason;
+            this.pendingDismissReason = null;
+            this.resetInteraction();
           },
           toggle() {
             const open = this.popup().matches(":popover-open");
             this.el.dataset.lvcOpen = String(open);
             this.trigger().setAttribute("aria-expanded", String(open));
-            if (open && !this.activeId) {
-              const first = this.items()[0];
-              if (first) this.focusItem(first); else this.close("empty", true);
+            if (open) {
+              delete this.el.dataset.lvcDismissReason;
+              this.pendingDismissReason = null;
+              if (!this.activeId) {
+                const first = this.items()[0];
+                if (first) this.focusItem(first); else this.close("empty", true);
+              }
             }
           },
-          beforeToggle(event) {
-            if (event.newState === "open") delete this.el.dataset.lvcDismissReason;
-            if (event.newState === "closed" && !this.el.contains(document.activeElement)) {
-              this.el.dataset.lvcDismissReason = "outside";
-              clearTimeout(this.bufferTimer);
-              this.buffer = "";
-              this.activeId = null;
-              this.items().forEach(item => { item.tabIndex = -1; delete item.dataset.lvcActive; });
-            }
+          resetInteraction() {
+            clearTimeout(this.bufferTimer);
+            this.buffer = "";
+            this.activeId = null;
+            this.items().forEach(item => { item.tabIndex = -1; delete item.dataset.lvcActive; });
           },
           focusItem(item) {
             this.items().forEach(candidate => {

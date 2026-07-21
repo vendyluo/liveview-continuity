@@ -13,6 +13,11 @@ async function focusId(page, id) {
   await page.waitForFunction(expected => document.activeElement?.id === expected, id);
 }
 
+async function actions(page) {
+  const value = (await page.locator("#actions").textContent()).trim();
+  return value ? value.split(",") : [];
+}
+
 async function open(page, key = "ArrowDown") {
   await page.locator("#fixture-menu-trigger").focus();
   await page.keyboard.press(key);
@@ -33,6 +38,12 @@ async function run(browserType, name, iteration) {
     await trigger.click();
     await focusId(page, "fixture-menu-item-alpha");
     await page.keyboard.press("Escape");
+    for (const key of ["Enter", "Space"]) {
+      await trigger.focus();
+      await page.keyboard.press(key);
+      await focusId(page, "fixture-menu-item-alpha");
+      await page.keyboard.press("Escape");
+    }
 
     await open(page);
     await page.locator("#fixture-menu-trigger[aria-expanded='true']").waitFor();
@@ -48,15 +59,28 @@ async function run(browserType, name, iteration) {
 
     await page.keyboard.press("ArrowDown");
     await focusId(page, "fixture-menu-item-disabled");
+    const disabledCount = (await actions(page)).length;
     await page.keyboard.press("Enter");
-    assert.equal(await page.locator("#actions").textContent(), "");
+    await page.keyboard.press("Space");
+    await page.locator("#fixture-menu-item-disabled").click({force: true});
+    assert.equal((await actions(page)).length, disabledCount);
     assert.equal(await page.locator("#fixture-menu-popup").isVisible(), true);
 
+    await page.keyboard.press("End");
+    await page.keyboard.press("a");
+    await focusId(page, "fixture-menu-item-alpha");
+    await page.waitForTimeout(550);
+    await page.keyboard.press("q");
+    await focusId(page, "fixture-menu-item-charlie");
+    await page.waitForTimeout(550);
     await page.keyboard.press("b");
     await page.keyboard.press("r");
     await focusId(page, "fixture-menu-item-bravo");
-    await page.keyboard.press("Control+x");
-    await focusId(page, "fixture-menu-item-bravo");
+    await page.waitForTimeout(550);
+    for (const key of ["Control+a", "Alt+a", "Meta+a"]) {
+      await page.keyboard.press(key);
+      await focusId(page, "fixture-menu-item-bravo");
+    }
     await page.keyboard.press("z");
     await focusId(page, "fixture-menu-item-bravo");
 
@@ -70,6 +94,7 @@ async function run(browserType, name, iteration) {
     await page.locator("#fixture-menu[data-revision='1']").waitFor();
     assert.equal(await page.evaluate(([a, b]) => a === b, [popupHandle, await page.locator("#fixture-menu-popup").elementHandle()]), true);
     assert.equal(await page.locator("#fixture-menu-popup").isVisible(), true);
+    assert.equal(await trigger.getAttribute("aria-expanded"), "true");
     await focusId(page, "fixture-menu-item-patch");
 
     await page.keyboard.press("ArrowDown");
@@ -79,6 +104,7 @@ async function run(browserType, name, iteration) {
     assert.equal(await page.evaluate(([a, b]) => a === b, [bravoHandle, await page.locator("#fixture-menu-item-bravo").elementHandle()]), true);
     await focusId(page, "fixture-menu-item-reorder");
     assert.match(await page.locator("#fixture-menu-item-bravo").textContent(), /updated/);
+    assert.equal(await trigger.getAttribute("aria-expanded"), "true");
 
     await page.locator("#fixture-menu-item-remove").focus();
     await focusId(page, "fixture-menu-item-remove");
@@ -111,6 +137,31 @@ async function run(browserType, name, iteration) {
     await page.locator("#outside").click();
     await focusId(page, "outside");
     assert.equal(await page.locator("#fixture-menu-popup").isVisible(), false);
+    await page.waitForFunction(() =>
+      document.querySelector("#fixture-menu")?.dataset.lvcOpen === "false" &&
+      !document.querySelector("#fixture-menu [data-lvc-active]"));
+    assert.equal(await page.locator("#fixture-menu [data-lvc-active]").count(), 0);
+    assert.equal(await page.locator("#fixture-menu").getAttribute("data-lvc-dismiss-reason"), "outside");
+    await trigger.click();
+    await focusId(page, "fixture-menu-item-alpha");
+    assert.equal(await page.locator("#fixture-menu").getAttribute("data-lvc-open"), "true");
+    assert.equal(await page.locator("#fixture-menu").getAttribute("data-lvc-dismiss-reason"), null);
+    await trigger.click();
+    await page.locator("#fixture-menu-popup").waitFor({state: "hidden"});
+    await page.locator("#fixture-menu[data-lvc-dismiss-reason='trigger']").waitFor();
+    assert.equal(await page.locator("#fixture-menu").getAttribute("data-lvc-dismiss-reason"), "trigger");
+    assert.equal(await page.locator("#fixture-menu [data-lvc-active]").count(), 0);
+    assert.equal(await trigger.getAttribute("aria-expanded"), "false");
+    await trigger.click();
+    await focusId(page, "fixture-menu-item-alpha");
+    await page.locator("#fixture-menu-popup").evaluate(popup => {
+      popup.hidePopover();
+      popup.showPopover();
+    });
+    await focusId(page, "fixture-menu-item-alpha");
+    assert.equal(await page.locator("#fixture-menu").getAttribute("data-lvc-open"), "true");
+    assert.equal(await page.locator("#fixture-menu").getAttribute("data-lvc-dismiss-reason"), null);
+    await page.keyboard.press("Escape");
 
     await open(page);
     await page.keyboard.press("Tab");
@@ -121,13 +172,21 @@ async function run(browserType, name, iteration) {
     await page.locator("#fixture-menu-popup").waitFor({state: "hidden"});
     assert.equal(await page.evaluate(() => document.querySelector("#fixture-menu-popup").contains(document.activeElement)), false);
 
-    await open(page);
-    await page.keyboard.press("b");
-    await page.keyboard.press("Enter");
-    await page.locator("#actions").filter({hasText: "bravo"}).waitFor();
-    assert.equal((await page.locator("#actions").textContent()).split("bravo").length - 1, 1);
-    await focusId(page, "fixture-menu-trigger");
-    assert.equal(await page.locator("#fixture-menu-popup").isVisible(), false);
+    for (const mode of ["Enter", "Space", "click"]) {
+      await open(page);
+      await page.keyboard.press("b");
+      const before = (await actions(page)).length;
+      if (mode === "click") await page.locator("#fixture-menu-item-bravo").click();
+      else await page.keyboard.press(mode);
+      await page.waitForFunction(expected => {
+        const value = document.querySelector("#actions").textContent.trim();
+        return (value ? value.split(",") : []).length === expected;
+      }, before + 1);
+      assert.equal((await actions(page)).length, before + 1);
+      assert.equal((await actions(page)).at(-1), "bravo");
+      await focusId(page, "fixture-menu-trigger");
+      assert.equal(await page.locator("#fixture-menu-popup").isVisible(), false);
+    }
 
     console.log(`PASS ${name} context ${iteration}`);
   } finally {

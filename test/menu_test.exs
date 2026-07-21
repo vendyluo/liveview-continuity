@@ -7,7 +7,7 @@ defmodule LiveViewContinuity.MenuTest do
       render_component(&LiveViewContinuity.Menu.menu/1,
         id: "account",
         on_action: "menu_action",
-        trigger: [%{inner_block: fn _, _ -> "Actions" end}],
+        trigger: [%{class: "account-trigger", inner_block: fn _, _ -> "Actions" end}],
         item: [
           %{id: "edit", inner_block: fn _, _ -> "Edit" end},
           %{id: "delete", disabled: true, inner_block: fn _, _ -> "Delete" end}
@@ -19,5 +19,7 @@ defmodule LiveViewContinuity.MenuTest do
     assert html =~ ~s(aria-labelledby="account-trigger")
     assert html =~ ~s(id="account-item-delete")
     assert html =~ ~s(aria-disabled="true")
+    assert html =~ ~s(class="account-trigger")
+    assert html =~ ~s(data-lvc-open="false")
   end
 end

@@ -30,7 +30,7 @@ Native outside light dismiss never invokes focus restoration. Tab closes without
 
 - `data-lvc-menu`
 - `data-lvc-open="true|false"`
-- `data-lvc-dismiss-reason="escape|action|outside|tab|empty"`
+- `data-lvc-dismiss-reason="escape|action|outside|trigger|tab|empty"`
 - `data-lvc-item`
 - `data-lvc-logical-id`
 - `data-lvc-active`

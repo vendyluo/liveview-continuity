@@ -6,7 +6,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
     %{id: "alpha", label: "Álpha"},
     %{id: "disabled", label: "Disabled", disabled: true},
     %{id: "bravo", label: "Bravo"},
-    %{id: "charlie", label: "Charlie"},
+    %{id: "charlie", label: "Charlie", typeahead_text: "Quartz"},
     %{id: "patch", label: "Patch in place", keep_open: true},
     %{id: "reorder", label: "Reorder items", keep_open: true},
     %{id: "remove", label: "Remove Bravo", keep_open: true},
@@ -28,6 +28,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
           id={item.id}
           disabled={Map.get(item, :disabled, false)}
           close_on_action={!Map.get(item, :keep_open, false)}
+          typeahead_text={Map.get(item, :typeahead_text)}
         >
           {item.label}
         </:item>
