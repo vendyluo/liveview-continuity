@@ -26,6 +26,39 @@ defmodule LiveViewContinuity.TabsTest do
     assert html =~ ~s(inert)
   end
 
+  test "renders a composable tab list and external panel with the same IDREF graph" do
+    list =
+      render_component(&LiveViewContinuity.Tabs.tab_list/1,
+        id: "sections",
+        value: "alpha",
+        on_select: "select",
+        label: "Sections",
+        tab: [slot("alpha", "Alpha"), slot("beta", "Beta")]
+      )
+
+    panels =
+      for {id, active} <- [{"alpha", true}, {"beta", false}] do
+        render_component(&LiveViewContinuity.Tabs.tab_panel/1,
+          root_id: "sections",
+          id: id,
+          active: active,
+          inner_block: [%{inner_block: fn _, _ -> "#{id} content" end}]
+        )
+      end
+
+    assert list =~ ~s(id="sections" role="tablist")
+    assert list =~ ~s(aria-controls="sections-panel-alpha")
+    assert list =~ ~s(aria-controls="sections-panel-beta")
+    assert Enum.at(panels, 0) =~ ~s(id="sections-panel-alpha")
+    assert Enum.at(panels, 0) =~ ~s(aria-labelledby="sections-tab-alpha")
+    refute Enum.at(panels, 0) =~ ~s( hidden)
+    refute Enum.at(panels, 0) =~ ~s( inert)
+    assert Enum.at(panels, 1) =~ ~s(id="sections-panel-beta")
+    assert Enum.at(panels, 1) =~ ~s(aria-labelledby="sections-tab-beta")
+    assert Enum.at(panels, 1) =~ ~s( hidden)
+    assert Enum.at(panels, 1) =~ ~s( inert)
+  end
+
   test "rejects invalid composition" do
     assert_raise ArgumentError, ~r/at least one tab/, fn -> render("x", []) end
 

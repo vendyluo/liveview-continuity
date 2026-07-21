@@ -63,7 +63,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <output id="actions">{Enum.join(@actions, ",")}</output>
 
       <h2>Tabs fixture</h2>
-      <.tabs
+      <.tab_list
         id="fixture-tabs"
         value={@selected}
         on_select="tabs_select"
@@ -75,11 +75,17 @@ defmodule ContinuityFixtureWeb.MenuLive do
           id={tab.id}
           label={tab.label}
           disabled={Map.get(tab, :disabled, false)}
-        >
-          {tab.label} panel content
-          <input :if={tab.id == "alpha"} id="tabs-panel-input" aria-label="Panel input" />
-        </:tab>
-      </.tabs>
+        />
+      </.tab_list>
+      <.tab_panel
+        :for={tab <- @tabs}
+        root_id="fixture-tabs"
+        id={tab.id}
+        active={tab.id == @selected}
+      >
+        {tab.label} panel content
+        <input :if={tab.id == "alpha"} id="tabs-panel-input" aria-label="Panel input" />
+      </.tab_panel>
       <input id="tabs-outside" aria-label="Outside tabs" />
       <button id="tabs-patch" phx-click="tabs_patch">Patch tabs</button>
       <button id="tabs-reorder" phx-click="tabs_reorder">Reorder tabs</button>

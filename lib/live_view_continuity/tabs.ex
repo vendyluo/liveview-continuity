@@ -94,7 +94,7 @@ defmodule LiveViewContinuity.Tabs do
             this.hadFocus = this.list().contains(document.activeElement);
           },
           updated() { this.reconcile(true); },
-          list() { return this.el.querySelector("[role=tablist]"); },
+          list() { return this.el.matches("[role=tablist]") ? this.el : this.el.querySelector("[role=tablist]"); },
           tabs() { return [...this.el.querySelectorAll(TAB)]; },
           enabled() { return this.tabs().filter(tab => tab.getAttribute("aria-disabled") !== "true"); },
           focus(event) {
@@ -160,6 +160,89 @@ defmodule LiveViewContinuity.Tabs do
           }
         };
       </script>
+    </div>
+    """
+  end
+
+  attr(:id, :string, required: true)
+  attr(:value, :string, required: true)
+  attr(:on_select, :string, required: true)
+  attr(:label, :string, required: true)
+  attr(:class, :any, default: nil)
+  attr(:rest, :global)
+
+  slot :tab, required: true do
+    attr(:id, :string, required: true)
+    attr(:label, :string, required: true)
+    attr(:disabled, :boolean)
+    attr(:tab_class, :any)
+  end
+
+  def tab_list(assigns) do
+    validate!(assigns.id, assigns.label, assigns.tab, assigns.value)
+
+    ~H"""
+    <div
+      id={@id}
+      role="tablist"
+      aria-label={@label}
+      aria-orientation="horizontal"
+      class={@class}
+      phx-hook=".Tabs"
+      data-lvc-tabs
+      data-lvc-action={@on_select}
+      data-orientation="horizontal"
+      {@rest}
+    >
+      <button
+        :for={tab <- @tab}
+        :key={tab.id}
+        id={tab_id(@id, tab.id)}
+        type="button"
+        role="tab"
+        class={tab[:tab_class]}
+        aria-selected={to_string(tab.id == @value)}
+        aria-disabled={to_string(tab[:disabled] || false)}
+        aria-controls={panel_id(@id, tab.id)}
+        tabindex={if tab.id == @value, do: "0", else: "-1"}
+        data-lvc-tab
+        data-lvc-logical-id={tab.id}
+        data-lvc-active={tab.id == @value}
+        data-lvc-disabled={tab[:disabled] || nil}
+        phx-mounted={JS.ignore_attributes(["tabindex", "data-lvc-focused"])}
+      >
+        {tab.label}
+      </button>
+    </div>
+    """
+  end
+
+  attr(:root_id, :string, required: true)
+  attr(:id, :string, required: true)
+  attr(:active, :boolean, required: true)
+  attr(:class, :any, default: nil)
+  attr(:rest, :global)
+  slot(:inner_block, required: true)
+
+  def tab_panel(assigns) do
+    validate_dom_id!(assigns.root_id, "tabs id")
+    validate_dom_id!(assigns.id, "logical tab id")
+
+    ~H"""
+    <div
+      id={panel_id(@root_id, @id)}
+      role="tabpanel"
+      class={@class}
+      aria-labelledby={tab_id(@root_id, @id)}
+      tabindex={if @active, do: "0", else: nil}
+      hidden={!@active}
+      inert={!@active}
+      data-lvc-panel
+      data-lvc-logical-id={@id}
+      data-lvc-hidden={!@active || nil}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
     </div>
     """
   end

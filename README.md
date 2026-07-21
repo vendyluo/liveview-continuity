@@ -86,6 +86,8 @@ See [MENU.md](MENU.md) for the observable contract.
 
 Tabs are horizontal and manually activated. Left, Right, Home, and End move focus among enabled tabs without selecting. Enter, Space, or click sends exactly one `%{"id" => logical_id}` event. The server owns selection and all panels remain mounted; inactive panels are hidden and inert. The hook preserves the logical focus cursor through patches and reorder without stealing focus from outside the tab list. See [TABS.md](TABS.md) for the full contract.
 
+Large LiveViews may render `<.tab_list>` and matching `<.tab_panel>` components separately, so adopting the interaction contract does not require relocating existing panel content. The same stable root and logical IDs preserve the reciprocal ARIA graph.
+
 ## Non-scope
 
 The first slice intentionally excludes selection, check/radio items, submenus, portals, detached or multiple triggers, and a positioning engine. It also excludes a generic state machine, arbitrary JavaScript assertion API, component generator, CSS framework, and design tokens.

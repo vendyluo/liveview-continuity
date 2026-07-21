@@ -27,11 +27,11 @@ async function open(page, key = "ArrowDown") {
 async function runTabs(page) {
   const root = page.locator("#fixture-tabs");
   const tabs = root.locator("[data-lvc-tab]");
-  const panels = root.locator("[data-lvc-panel]");
+  const panels = page.locator("[data-lvc-panel][aria-labelledby^='fixture-tabs-tab-']");
   assert.equal(await root.getAttribute("data-orientation"), "horizontal");
-  assert.equal(await root.locator("[role=tablist]").getAttribute("aria-orientation"), "horizontal");
-  assert.equal(await root.locator("[role=tablist]").getAttribute("aria-label"), "Fixture sections");
-  assert.equal(await root.getAttribute("aria-label"), null);
+  assert.equal(await root.getAttribute("role"), "tablist");
+  assert.equal(await root.getAttribute("aria-orientation"), "horizontal");
+  assert.equal(await root.getAttribute("aria-label"), "Fixture sections");
 
   for (let i = 0; i < await tabs.count(); i++) {
     const tab = tabs.nth(i);
@@ -43,7 +43,7 @@ async function runTabs(page) {
     assert.equal(await panel.getAttribute("inert"), isSelected ? null : "");
   }
   assert.equal(await root.locator("[data-lvc-tab][aria-selected=true]").count(), 1);
-  assert.equal(await root.locator("[data-lvc-panel]:not([hidden])").count(), 1);
+  assert.equal(await panels.filter({visible: true}).count(), 1);
   assert.equal(await root.locator("[data-lvc-tab][tabindex='0']").count(), 1);
 
   const alpha = page.locator("#fixture-tabs-tab-alpha");
@@ -81,7 +81,7 @@ async function runTabs(page) {
     await page.waitForFunction(expected => document.querySelector("#tabs-selections").textContent.trim().split(",").filter(Boolean).length === expected, before + 1);
     assert.equal(await selected(), "bravo");
     assert.equal(await root.locator("[data-lvc-tab][aria-selected=true]").count(), 1);
-    assert.equal(await root.locator("[data-lvc-panel]:not([hidden])").count(), 1);
+    assert.equal(await panels.filter({visible: true}).count(), 1);
   }
 
   const bravoHandle = await page.locator("#fixture-tabs-tab-bravo").elementHandle();
