@@ -16,6 +16,8 @@
   },
   "expectations": [
     {"probe": "node_identity", "selector": "#fixture-menu-popup", "after": "same"},
-    {"probe": "popover", "selector": "#fixture-menu-popup", "before": {"open": true}, "after": {"open": true}}
+    {"probe": "popover", "selector": "#fixture-menu-popup", "before": {"open": true}, "after": {"open": true}},
+    {"probe": "focus", "selector": "#fixture-menu-item-patch", "before": {"active": false}, "after": {"active": true}},
+    {"probe": "attribute", "selector": "#fixture-menu-trigger", "attribute": "aria-expanded", "before": {"value": "true"}, "after": {"value": "true"}}
   ]
 }

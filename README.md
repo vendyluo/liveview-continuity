@@ -103,7 +103,7 @@ mix live_interaction_contracts.check \
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.
 
-The LIC v1 contract honestly checks popup node identity and native popover state across an acknowledged in-menu patch. Rich menu semantics stay in the application-specific Playwright driver because LIC 1.3 has no arbitrary menu assertion surface. An intentionally broken red fixture is not included in this slice; capturing a checked-in red-path proof is a release blocker before any Hex publication and a candidate for a future LIC 1.4 evidence workflow.
+The LIC v1 contract honestly checks popup node identity, native popover state, post-patch trigger-item focus, and `aria-expanded` around an acknowledged in-menu patch. Rich menu semantics—including same-item focus continuity—stay in the application-specific Playwright driver because LIC 1.3 evaluates before-state prior to focusing its declared patch trigger and has no arbitrary menu assertion surface. An intentionally broken red fixture is not included in this slice; capturing a checked-in red-path proof is a release blocker before any Hex publication and a candidate for a future LIC 1.4 evidence workflow.
 
 ## Inspiration and status
 
