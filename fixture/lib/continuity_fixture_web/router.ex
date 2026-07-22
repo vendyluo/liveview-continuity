@@ -13,5 +13,6 @@ defmodule ContinuityFixtureWeb.Router do
   scope "/" do
     pipe_through(:browser)
     live("/", ContinuityFixtureWeb.MenuLive)
+    live("/destination", ContinuityFixtureWeb.MenuLive)
   end
 end

@@ -11,7 +11,7 @@ This independent community project explores a narrow ownership model: LiveView k
 Add LiveView Continuity to your dependencies:
 
 ```elixir
-{:liveview_continuity, "~> 0.2.0"}
+{:liveview_continuity, "~> 0.3.0"}
 ```
 
 The package requires Elixir 1.18 or newer, Phoenix 1.8 or newer, and Phoenix LiveView 1.1 or newer. Phoenix 1.8 is required by colocated hooks. Add the LiveView compiler to the consuming project:
@@ -36,6 +36,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
 <.menu id="account-actions" on_action="account_action" class="account-menu">
   <:trigger class="account-menu-trigger">Actions</:trigger>
   <:item id="edit" class="account-menu-item">Edit</:item>
+  <:item id="settings" navigate={~p"/settings"}>Settings</:item>
   <:item id="archive" typeahead_text="Archive">Archive account</:item>
   <:item id="delete" disabled={@cannot_delete}>Delete</:item>
 </.menu>
@@ -50,7 +51,7 @@ def handle_event("account_action", %{"id" => id}, socket) do
 end
 ```
 
-`id` is required and stable. Item IDs are logical IDs and become stable DOM IDs scoped by the menu. `typeahead_text` is optional; otherwise visible text content is used. `close_on_action={false}` is a narrow escape hatch for an action whose acknowledged patch must remain inside the open menu. Normal actions close by default.
+`id` is required and stable. Item IDs are logical IDs and become stable DOM IDs scoped by the menu. An item with `navigate` is a native Phoenix LiveView navigation link and does not invoke `on_action`; other items are action buttons. `typeahead_text` is optional; otherwise visible text content is used. `close_on_action={false}` is a narrow escape hatch for an action whose acknowledged patch must remain inside the open menu. Normal actions close by default.
 
 ### Ownership
 
@@ -66,7 +67,7 @@ Client-owned reflections use stable `data-lvc-*` styling hooks. Only trigger `ar
 
 - Pointer, Enter, Space, and ArrowDown open to the first item; ArrowUp opens to the last.
 - Arrow keys wrap, with Home and End navigation.
-- Disabled items remain focusable and announced, but never dispatch an action.
+- Disabled items remain focusable and announced, but never dispatch an action or navigate.
 - Typeahead uses a 500 ms reset window, multi-character prefixes, and `Intl.Collator` with base sensitivity for practical case/accent-insensitive matching. Ctrl, Meta, and Alt combinations do not match.
 - Escape and successful normal actions close and restore trigger focus.
 - Outside pointer dismissal does not restore focus over the outside target.

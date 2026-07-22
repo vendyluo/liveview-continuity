@@ -15,6 +15,18 @@ defmodule ContinuityFixtureWeb.MenuLive do
     %{id: "patch", label: "Patch in place", keep_open: true},
     %{id: "reorder", label: "Reorder items", keep_open: true},
     %{id: "remove", label: "Remove Bravo", keep_open: true},
+    %{
+      id: "disabled-destination",
+      label: "Unavailable destination",
+      navigate: "/destination",
+      disabled: true
+    },
+    %{
+      id: "destination",
+      label: "Destination",
+      navigate: "/destination",
+      typeahead_text: "Go destination"
+    },
     %{id: "empty", label: "Empty menu", keep_open: true}
   ]
 
@@ -86,6 +98,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
           id={item.id}
           disabled={Map.get(item, :disabled, false)}
           close_on_action={!Map.get(item, :keep_open, false)}
+          navigate={Map.get(item, :navigate)}
           typeahead_text={Map.get(item, :typeahead_text)}
         >
           {item.label}

@@ -1,6 +1,6 @@
 defmodule LiveViewContinuity.Menu do
   @moduledoc """
-  An unstyled, action-only menu with patch-safe client interaction state.
+  An unstyled action and navigation menu with patch-safe client interaction state.
 
   See `MENU.md` for the observable interaction contract.
   """
@@ -22,10 +22,13 @@ defmodule LiveViewContinuity.Menu do
     attr(:disabled, :boolean)
     attr(:class, :any)
     attr(:close_on_action, :boolean)
+    attr(:navigate, :string)
     attr(:typeahead_text, :string)
   end
 
   def menu(assigns) do
+    validate_items!(assigns.item)
+
     assigns =
       case assigns.trigger do
         [trigger_entry] ->
@@ -64,23 +67,12 @@ defmodule LiveViewContinuity.Menu do
         popover="auto"
         aria-labelledby={@id <> "-trigger"}
       >
-        <button
+        <.menu_item
           :for={item <- @item}
           :key={item.id}
-          id={@id <> "-item-" <> item.id}
-          type="button"
-          role="menuitem"
-          tabindex="-1"
-          aria-disabled={to_string(item[:disabled] || false)}
-          class={item[:class]}
-          data-lvc-item
-          data-lvc-logical-id={item.id}
-          data-lvc-typeahead={item[:typeahead_text]}
-          data-lvc-close-on-action={to_string(Map.get(item, :close_on_action, true))}
-          phx-mounted={JS.ignore_attributes(["tabindex", "data-lvc-active"])}
-        >
-          {render_slot(item)}
-        </button>
+          menu_id={@id}
+          item={item}
+        />
       </div>
       <script :type={Phoenix.LiveView.ColocatedHook} name=".Menu">
         const ITEM = "[data-lvc-item]";
@@ -145,6 +137,7 @@ defmodule LiveViewContinuity.Menu do
           popupKey(event) {
             const items = this.items();
             const current = Math.max(0, items.findIndex(item => item.dataset.lvcLogicalId === this.activeId));
+            const item = event.target.closest(ITEM);
             let next;
             if (event.key === "ArrowDown") next = (current + 1) % items.length;
             else if (event.key === "ArrowUp") next = (current - 1 + items.length) % items.length;
@@ -152,9 +145,14 @@ defmodule LiveViewContinuity.Menu do
             else if (event.key === "End") next = items.length - 1;
             else if (event.key === "Escape") { event.preventDefault(); return this.close("escape", true); }
             else if (event.key === "Tab") { this.close("tab", false); return; }
-            else if ((event.key === "Enter" || event.key === " ") && event.target.matches(ITEM)) {
+            else if (item && this.isNavigate(item) && event.key === "Enter") return;
+            else if (item && this.isNavigate(item) && event.key === " ") {
               event.preventDefault();
-              return this.activate(event.target);
+              if (!this.hasModifier(event) && item.getAttribute("aria-disabled") !== "true") item.click();
+              return;
+            } else if ((event.key === "Enter" || event.key === " ") && item) {
+              event.preventDefault();
+              return this.activateAction(item);
             } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
               return this.typeahead(event.key);
             } else return;
@@ -163,7 +161,16 @@ defmodule LiveViewContinuity.Menu do
           },
           popupClick(event) {
             const item = event.target.closest(ITEM);
-            if (item) this.activate(item);
+            if (!item) return;
+            if (!this.isNavigate(item)) return this.activateAction(item);
+            if (item.getAttribute("aria-disabled") === "true") {
+              event.preventDefault();
+              event.stopPropagation();
+              return;
+            }
+            const modified = this.hasModifier(event);
+            if (event.altKey) event.stopPropagation();
+            this.close("action", modified);
           },
           popupFocus(event) {
             const item = event.target.closest(ITEM);
@@ -175,12 +182,14 @@ defmodule LiveViewContinuity.Menu do
             });
             this.activeId = item.dataset.lvcLogicalId;
           },
-          activate(item) {
+          activateAction(item) {
             if (item.getAttribute("aria-disabled") === "true") return;
             const id = item.dataset.lvcLogicalId;
             this.pushEvent(this.el.dataset.lvcAction, {id});
             if (item.dataset.lvcCloseOnAction !== "false") this.close("action", true);
           },
+          isNavigate(item) { return item.localName === "a"; },
+          hasModifier(event) { return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey; },
           open(index) {
             const popup = this.popup();
             if (!popup.matches(":popover-open")) popup.showPopover();
@@ -265,5 +274,79 @@ defmodule LiveViewContinuity.Menu do
       </script>
     </div>
     """
+  end
+
+  attr(:menu_id, :string, required: true)
+  attr(:item, :map, required: true)
+
+  defp menu_item(assigns) do
+    ~H"""
+    <.link
+      :if={@item[:navigate] && !@item[:disabled]}
+      id={@menu_id <> "-item-" <> @item.id}
+      navigate={@item.navigate}
+      role="menuitem"
+      tabindex="-1"
+      aria-disabled={to_string(@item[:disabled] || false)}
+      class={@item[:class]}
+      data-lvc-item
+      data-lvc-logical-id={@item.id}
+      data-lvc-typeahead={@item[:typeahead_text]}
+      data-lvc-close-on-action={to_string(Map.get(@item, :close_on_action, true))}
+      phx-mounted={JS.ignore_attributes(["tabindex", "data-lvc-active"])}
+    >
+      {render_slot(@item)}
+    </.link>
+    <a
+      :if={@item[:navigate] && @item[:disabled]}
+      id={@menu_id <> "-item-" <> @item.id}
+      role="menuitem"
+      tabindex="-1"
+      aria-disabled="true"
+      class={@item[:class]}
+      data-lvc-item
+      data-lvc-logical-id={@item.id}
+      data-lvc-typeahead={@item[:typeahead_text]}
+      data-lvc-close-on-action="true"
+      phx-mounted={JS.ignore_attributes(["tabindex", "data-lvc-active"])}
+    >
+      {render_slot(@item)}
+    </a>
+    <button
+      :if={!@item[:navigate]}
+      id={@menu_id <> "-item-" <> @item.id}
+      type="button"
+      role="menuitem"
+      tabindex="-1"
+      aria-disabled={to_string(@item[:disabled] || false)}
+      class={@item[:class]}
+      data-lvc-item
+      data-lvc-logical-id={@item.id}
+      data-lvc-typeahead={@item[:typeahead_text]}
+      data-lvc-close-on-action={to_string(Map.get(@item, :close_on_action, true))}
+      phx-mounted={JS.ignore_attributes(["tabindex", "data-lvc-active"])}
+    >
+      {render_slot(@item)}
+    </button>
+    """
+  end
+
+  defp validate_items!(items) do
+    Enum.each(items, fn item ->
+      case item[:navigate] do
+        nil ->
+          :ok
+
+        navigate when is_binary(navigate) and navigate != "" ->
+          if Map.get(item, :close_on_action, true) == false do
+            raise ArgumentError,
+                  "menu navigation item #{inspect(item.id)} cannot set close_on_action to false"
+          end
+
+        _ ->
+          raise ArgumentError,
+                "menu navigation item #{inspect(item.id)} requires a nonempty navigate path"
+      end
+    end)
   end
 end

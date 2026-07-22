@@ -759,6 +759,90 @@ async function runActionTooltip(page) {
   assert.equal((await page.locator("#action-tooltip-events").textContent()).trim().split(",").length, 1);
 }
 
+async function runMenuNavigation(page, context) {
+  await ready(page);
+  const menu = page.locator("#fixture-menu");
+  const link = page.locator("#fixture-menu-item-destination");
+  const disabledLink = page.locator("#fixture-menu-item-disabled-destination");
+
+  assert.equal(await link.evaluate(element => element.localName), "a");
+  assert.equal(new URL(await link.getAttribute("href"), baseURL).pathname, "/destination");
+  assert.equal(await link.getAttribute("data-phx-link"), "redirect");
+  assert.equal(await link.getAttribute("role"), "menuitem");
+  assert.equal(await disabledLink.getAttribute("href"), null);
+  assert.equal(await disabledLink.getAttribute("data-phx-link"), null);
+  assert.equal(await page.locator("#fixture-menu-item-alpha").evaluate(element => element.localName), "button");
+
+  await open(page);
+  await page.keyboard.press("g");
+  await focusId(page, "fixture-menu-item-destination");
+  const linkHandle = await link.elementHandle();
+  const beforeRevision = Number(await menu.getAttribute("data-revision"));
+  await page.locator("#fixture-menu-item-patch").evaluate(element => element.click());
+  await page.waitForFunction(
+    revision => Number(document.querySelector("#fixture-menu").dataset.revision) > revision,
+    beforeRevision,
+  );
+  assert.equal(await page.evaluate(([a, b]) => a === b, [linkHandle, await link.elementHandle()]), true);
+  await focusId(page, "fixture-menu-item-destination");
+  assert.equal(await page.locator("#fixture-menu-popup").isVisible(), true);
+  await page.keyboard.press("Escape");
+
+  await open(page);
+  await disabledLink.focus();
+  await focusId(page, "fixture-menu-item-disabled-destination");
+  const actionCount = (await actions(page)).length;
+  for (const mode of ["Enter", "Space", "script", "click", "middle"]) {
+    if (mode === "Enter" || mode === "Space") await page.keyboard.press(mode);
+    else if (mode === "script") await disabledLink.evaluate(element => element.click());
+    else if (mode === "middle") await disabledLink.click({button: "middle", force: true});
+    else await disabledLink.click({force: true});
+    await page.waitForTimeout(25);
+    assert.equal(new URL(page.url()).pathname, "/");
+    assert.equal(await page.locator("#fixture-menu-popup").isVisible(), true);
+    await focusId(page, "fixture-menu-item-disabled-destination");
+    assert.equal((await actions(page)).length, actionCount);
+  }
+  await page.keyboard.press("Escape");
+
+  const modifier = process.platform === "darwin" ? "Meta" : "Control";
+  await open(page);
+  await link.focus();
+  const newPagePromise = context.waitForEvent("page");
+  await link.click({modifiers: [modifier]});
+  const newPage = await newPagePromise;
+  await newPage.waitForURL(`${baseURL}/destination`);
+  assert.equal(new URL(page.url()).pathname, "/");
+  assert.equal(await page.locator("#fixture-menu-popup").isVisible(), false);
+  await focusId(page, "fixture-menu-trigger");
+  assert.equal((await actions(page)).length, actionCount);
+  await newPage.close();
+
+  for (const mode of ["click", "Enter", "Space"]) {
+    await ready(page);
+    await page.evaluate(() => {
+      sessionStorage.setItem("menu-navigation-count", "0");
+      if (window.__menuNavigationListener) {
+        window.removeEventListener("phx:page-loading-start", window.__menuNavigationListener);
+      }
+      window.__menuNavigationListener = event => {
+        if (event.detail?.kind !== "redirect") return;
+        const count = Number(sessionStorage.getItem("menu-navigation-count"));
+        sessionStorage.setItem("menu-navigation-count", String(count + 1));
+      };
+      window.addEventListener("phx:page-loading-start", window.__menuNavigationListener);
+    });
+    await open(page);
+    await link.focus();
+    await focusId(page, "fixture-menu-item-destination");
+    if (mode === "click") await link.click();
+    else await page.keyboard.press(mode);
+    await page.waitForURL(`${baseURL}/destination`);
+    assert.equal(Number(await page.evaluate(() => sessionStorage.getItem("menu-navigation-count"))), 1);
+    assert.deepEqual(await actions(page), []);
+  }
+}
+
 async function run(browserType, name, iteration) {
   const browser = await browserType.launch();
   const context = await browser.newContext();
@@ -929,6 +1013,7 @@ async function run(browserType, name, iteration) {
     await runTooltip(page);
     await runAccordion(page);
     await runRadioGroup(page);
+    await runMenuNavigation(page, context);
     console.log(`PASS ${name} context ${iteration}`);
   } finally {
     await context.close();

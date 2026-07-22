@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 — 2026-07-22
+
+- Add native LiveView `navigate` items to Menu while preserving link semantics, disabled behavior, roving focus, typeahead, and patch identity.
+
 ## 0.2.0 — 2026-07-22
 
 - Add a narrow `trigger_attrs` seam to Tooltip for `aria-label`, `phx-click`, `phx-target`, and `phx-value-*` attributes while preserving component ownership of identity, button semantics, and descriptive ARIA state.
