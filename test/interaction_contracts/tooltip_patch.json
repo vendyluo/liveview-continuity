@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "continuity-tooltip-retains-popup-through-source-exit-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-tooltip"},
+  "activate": [
+    {"type": "hover", "selector": "#fixture-tooltip-trigger"}
+  ],
+  "patch": {
+    "trigger": {"type": "click", "selector": "#tooltip-patch"},
+    "ack": {
+      "type": "attribute_change",
+      "selector": "#fixture-tooltip",
+      "attribute": "data-revision"
+    }
+  },
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-tooltip-popup", "after": "same"},
+    {"probe": "popover", "selector": "#fixture-tooltip-popup", "before": {"open": true}, "after": {"open": false}},
+    {"probe": "focus", "selector": "#fixture-tooltip-trigger", "before": {"active": false}, "after": {"active": false}},
+    {"probe": "attribute", "selector": "#fixture-tooltip-trigger", "attribute": "aria-describedby", "before": {"value": "fixture-help fixture-tooltip-popup"}, "after": {"value": "fixture-help"}}
+  ]
+}

@@ -102,6 +102,17 @@ Large LiveViews may render `<.tab_list>` and matching `<.tab_panel>` components 
 
 Dialog uses only native `showModal()`: the server owns desired `open` intent while the browser owns effective top-layer state and focus. Trigger and Close requests happen immediately and must be acknowledged by setting `open` to `true` or `false` in `on_open` and `on_close` respectively. Escape reports reason `escape`; explicit Close reports `close`. See [DIALOG.md](DIALOG.md) for focus fallback, patch continuity, scroll locking, and deferred features.
 
+## Tooltip
+
+```heex
+<.tooltip id="save-help" delay={600} describedby="save-requirements">
+  <:trigger>Save</:trigger>
+  Saves the current draft
+</.tooltip>
+```
+
+Tooltip renders an always-mounted, non-interactive native manual popover. Mouse hover opens after `delay`; keyboard or programmatic focus opens immediately. Pointer and focus sources combine independently, while Escape or a trigger press dismisses without moving focus. LiveView owns content, delay, disabled state, existence, and optional base description tokens; the browser owns effective open state, timer safety, native Popover state, and the tooltip token in `aria-describedby`. Consumers own CSS, positioning, and `pointer-events: none`. See [TOOLTIP.md](TOOLTIP.md) for patch behavior, accessibility limits, and deferred scope.
+
 ## Non-scope
 
 The first slice intentionally excludes selection, check/radio items, submenus, portals, detached or multiple triggers, and a positioning engine. It also excludes a generic state machine, arbitrary JavaScript assertion API, component generator, CSS framework, and design tokens.
@@ -126,12 +137,12 @@ npm run test:browser
 mix live_interaction_contracts.check \
   --url http://127.0.0.1:4140 \
   --contract test/interaction_contracts/menu_patch.json
-# Run again with test/interaction_contracts/tabs_patch.json and dialog_patch.json
+# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, and tooltip_patch.json
 ```
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.
 
-The LIC v1 contract honestly checks popup node identity, native popover state, post-patch trigger-item focus, and `aria-expanded` around an acknowledged in-menu patch. Rich menu semantics—including same-item focus continuity—stay in the application-specific Playwright driver because LIC 1.3 evaluates before-state prior to focusing its declared patch trigger and has no arbitrary menu assertion surface. An intentionally broken red fixture is not included in this slice; capturing a checked-in red-path proof is a release blocker before any Hex publication and a candidate for a future LIC 1.4 evidence workflow.
+The LIC v1 contracts honestly check native surface state, node identity, focus, and owned ARIA attributes around acknowledged patches. Tooltip's LIC case proves retained popup identity plus source-exit close and ARIA cleanup; its focused-open continuity is verified by the three-engine application-specific Playwright driver. Rich interaction semantics stay in that driver because LIC 1.3 has no arbitrary assertion surface. An intentionally broken red fixture is not included in this slice; capturing a checked-in red-path proof is a release blocker before any Hex publication and a candidate for a future LIC 1.4 evidence workflow.
 
 ## Inspiration and status
 

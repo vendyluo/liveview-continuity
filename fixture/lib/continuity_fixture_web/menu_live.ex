@@ -3,6 +3,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
   import LiveViewContinuity.Menu
   import LiveViewContinuity.Tabs
   import LiveViewContinuity.Dialog
+  import LiveViewContinuity.Tooltip
 
   @base_items [
     %{id: "alpha", label: "Álpha"},
@@ -39,7 +40,12 @@ defmodule ContinuityFixtureWeb.MenuLive do
        dialog_input: true,
        dialog_positive: true,
        dialog_opens: [],
-       dialog_closes: []
+       dialog_closes: [],
+       tooltip_revision: 0,
+       tooltip_delay: 120,
+       tooltip_disabled: false,
+       tooltip_present: true,
+       tooltip_base: "fixture-help"
      )}
   end
 
@@ -138,6 +144,27 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <output id="dialog-revision">{@dialog_revision}</output>
       <output id="dialog-opens">{Enum.join(@dialog_opens, ",")}</output>
       <output id="dialog-closes">{Enum.join(@dialog_closes, ",")}</output>
+
+      <h2>Tooltip fixture</h2>
+      <span id="fixture-help">Existing description</span>
+      <.tooltip
+        :if={@tooltip_present}
+        id="fixture-tooltip"
+        delay={@tooltip_delay}
+        disabled={@tooltip_disabled}
+        describedby={@tooltip_base}
+        data-revision={@tooltip_revision}
+      >
+        <:trigger><span>Tooltip trigger</span></:trigger>
+        Tooltip content revision {@tooltip_revision}
+      </.tooltip>
+      <button id="tooltip-patch" phx-click="tooltip_patch">Patch tooltip</button>
+      <button id="tooltip-delay" phx-click="tooltip_delay">Change tooltip delay</button>
+      <button id="tooltip-base" phx-click="tooltip_base">Change base description</button>
+      <button id="tooltip-disable" phx-click="tooltip_disable">Disable tooltip</button>
+      <button id="tooltip-remove" phx-click="tooltip_remove">Remove tooltip</button>
+      <button id="tooltip-reset" phx-click="tooltip_reset">Reset tooltip</button>
+      <output id="tooltip-revision">{@tooltip_revision}</output>
     </main>
     """
   end
@@ -268,6 +295,31 @@ defmodule ContinuityFixtureWeb.MenuLive do
 
   def handle_event("dialog_reset", _, socket) do
     {:noreply, assign(socket, dialog_open: false, dialog_input: true, dialog_positive: true)}
+  end
+
+  def handle_event("tooltip_patch", _, socket),
+    do: {:noreply, update(socket, :tooltip_revision, &(&1 + 1))}
+
+  def handle_event("tooltip_delay", _, socket),
+    do: {:noreply, assign(socket, :tooltip_delay, 80)}
+
+  def handle_event("tooltip_base", _, socket),
+    do: {:noreply, assign(socket, :tooltip_base, "fixture-help-updated")}
+
+  def handle_event("tooltip_disable", _, socket),
+    do: {:noreply, assign(socket, :tooltip_disabled, true)}
+
+  def handle_event("tooltip_remove", _, socket),
+    do: {:noreply, assign(socket, :tooltip_present, false)}
+
+  def handle_event("tooltip_reset", _, socket) do
+    {:noreply,
+     assign(socket,
+       tooltip_present: true,
+       tooltip_disabled: false,
+       tooltip_delay: 120,
+       tooltip_base: "fixture-help"
+     )}
   end
 
   defp revise(socket, items, mode) do

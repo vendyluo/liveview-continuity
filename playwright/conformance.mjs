@@ -248,6 +248,139 @@ async function runDialog(page) {
   }, originalScrollStyle);
 }
 
+async function runTooltip(page) {
+  const root = page.locator("#fixture-tooltip");
+  const trigger = page.locator("#fixture-tooltip-trigger");
+  const popup = page.locator("#fixture-tooltip-popup");
+  const isOpen = () => popup.evaluate(el => el.matches(":popover-open"));
+
+  assert.equal(await popup.getAttribute("role"), "tooltip");
+  assert.equal(await popup.getAttribute("popover"), "manual");
+  assert.equal(await trigger.getAttribute("aria-describedby"), "fixture-help");
+  assert.equal(await isOpen(), false);
+
+  const focusBeforeHover = await page.evaluate(() => document.activeElement?.id);
+  await trigger.hover();
+  await page.waitForTimeout(50);
+  assert.equal(await isOpen(), false);
+  await page.waitForFunction(() => document.querySelector("#fixture-tooltip-popup").matches(":popover-open"));
+  assert.equal(await root.getAttribute("data-lvc-open"), "true");
+  assert.equal(await trigger.getAttribute("aria-describedby"), "fixture-help fixture-tooltip-popup");
+  await page.keyboard.press("Escape");
+  assert.equal(await isOpen(), false);
+  assert.equal(await page.evaluate(() => document.activeElement?.id), focusBeforeHover);
+  await page.waitForTimeout(140);
+  assert.equal(await isOpen(), false);
+  await page.mouse.move(0, 0);
+  assert.equal(await trigger.getAttribute("aria-describedby"), "fixture-help");
+
+  // A cancelled timer and an older timer from rapid re-entry cannot open it.
+  await trigger.hover();
+  await page.waitForTimeout(35);
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(110);
+  assert.equal(await isOpen(), false);
+  await trigger.hover();
+  await page.waitForTimeout(35);
+  await page.mouse.move(0, 0);
+  await trigger.hover();
+  await page.waitForTimeout(50);
+  assert.equal(await isOpen(), false);
+  await page.waitForFunction(() => document.querySelector("#fixture-tooltip-popup").matches(":popover-open"));
+
+  // Focus and pointer are independent sources in both directions.
+  await trigger.focus();
+  await page.mouse.move(0, 0);
+  assert.equal(await isOpen(), true);
+  await trigger.hover();
+  await page.locator("#outside").focus();
+  assert.equal(await isOpen(), true);
+  await page.mouse.move(0, 0);
+  await page.waitForFunction(() => !document.querySelector("#fixture-tooltip-popup").matches(":popover-open"));
+
+  // Focus opens immediately. Escape retains focus and suppresses reopening.
+  await trigger.focus();
+  assert.equal(await isOpen(), true);
+  await page.keyboard.press("Escape");
+  await focusId(page, "fixture-tooltip-trigger");
+  assert.equal(await isOpen(), false);
+  await page.waitForTimeout(140);
+  assert.equal(await isOpen(), false);
+  await page.mouse.move(0, 0);
+  await trigger.hover();
+  assert.equal(await isOpen(), true);
+  await page.mouse.move(0, 0);
+  assert.equal(await isOpen(), true);
+  await page.keyboard.press("Escape");
+  await page.locator("#outside").focus();
+  await trigger.focus();
+  assert.equal(await isOpen(), true);
+  await page.keyboard.press("Enter");
+  assert.equal(await isOpen(), false);
+  await page.locator("#outside").focus();
+  await trigger.focus();
+  await page.keyboard.press("Space");
+  assert.equal(await isOpen(), false);
+  await page.locator("#outside").focus();
+  await trigger.hover();
+  await page.waitForFunction(() => document.querySelector("#fixture-tooltip-popup").matches(":popover-open"));
+  await trigger.locator("span").click();
+  assert.equal(await isOpen(), false);
+  await page.locator("#outside").focus();
+  await trigger.focus();
+  await trigger.evaluate(element => element.click());
+  assert.equal(await isOpen(), false);
+
+  // Touch pointer entry is ignored.
+  await page.locator("#outside").focus();
+  await trigger.dispatchEvent("pointerenter", {pointerType: "touch"});
+  await page.waitForTimeout(140);
+  assert.equal(await isOpen(), false);
+
+  // Open content patches preserve popup and trigger identity, focus, native state, and ARIA.
+  await trigger.focus();
+  const popupHandle = await popup.elementHandle();
+  const triggerHandle = await trigger.elementHandle();
+  const revision = Number(await root.getAttribute("data-revision"));
+  await page.locator("#tooltip-patch").evaluate(el => el.click());
+  await page.waitForFunction(expected => Number(document.querySelector("#fixture-tooltip").dataset.revision) > expected, revision);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [popupHandle, await popup.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [triggerHandle, await trigger.elementHandle()]), true);
+  await focusId(page, "fixture-tooltip-trigger");
+  assert.equal(await isOpen(), true);
+  assert.match(await popup.textContent(), /revision 1/);
+  assert.equal(await trigger.getAttribute("aria-describedby"), "fixture-help fixture-tooltip-popup");
+
+  await page.locator("#tooltip-base").evaluate(el => el.click());
+  await page.waitForFunction(() => document.querySelector("#fixture-tooltip").dataset.lvcBaseDescribedby === "fixture-help-updated");
+  assert.equal(await trigger.getAttribute("aria-describedby"), "fixture-help-updated fixture-tooltip-popup");
+
+  await page.locator("#tooltip-disable").evaluate(el => el.click());
+  await page.waitForFunction(() => document.querySelector("#fixture-tooltip").dataset.lvcDisabled === "true");
+  assert.equal(await isOpen(), false);
+  assert.equal(await trigger.getAttribute("aria-describedby"), "fixture-help-updated");
+
+  await page.locator("#tooltip-reset").click();
+  await page.locator("#outside").focus();
+  await page.locator("#tooltip-delay").click();
+  await page.waitForFunction(() => document.querySelector("#fixture-tooltip").dataset.lvcDelay === "80");
+  await trigger.hover();
+  await page.waitForTimeout(20);
+  assert.equal(await isOpen(), false);
+  await page.waitForFunction(() => document.querySelector("#fixture-tooltip-popup").matches(":popover-open"));
+  await page.mouse.move(0, 0);
+
+  await trigger.hover();
+  await page.waitForTimeout(20);
+  await page.locator("#tooltip-remove").evaluate(el => el.click());
+  await root.waitFor({state: "detached"});
+  await page.waitForTimeout(100);
+  await page.locator("#tooltip-reset").click();
+  await root.waitFor({state: "attached"});
+  assert.equal(await root.getAttribute("data-lvc-open"), "false");
+  assert.equal(await page.locator("#fixture-tooltip-popup").evaluate(el => el.matches(":popover-open")), false);
+}
+
 async function run(browserType, name, iteration) {
   const browser = await browserType.launch();
   const context = await browser.newContext();
@@ -414,6 +547,7 @@ async function run(browserType, name, iteration) {
 
     await runTabs(page);
     await runDialog(page);
+    await runTooltip(page);
     console.log(`PASS ${name} context ${iteration}`);
   } finally {
     await context.close();
