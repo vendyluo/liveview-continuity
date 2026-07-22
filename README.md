@@ -11,7 +11,7 @@ This independent community project explores a narrow ownership model: LiveView k
 Add LiveView Continuity to your dependencies:
 
 ```elixir
-{:liveview_continuity, "~> 0.3.0"}
+{:liveview_continuity, "~> 0.4.0"}
 ```
 
 The package requires Elixir 1.18 or newer, Phoenix 1.8 or newer, and Phoenix LiveView 1.1 or newer. Phoenix 1.8 is required by colocated hooks. Add the LiveView compiler to the consuming project:
@@ -102,6 +102,8 @@ Large LiveViews may render `<.tab_list>` and matching `<.tab_panel>` components 
 ```
 
 Dialog uses only native `showModal()`: the server owns desired `open` intent while the browser owns effective top-layer state and focus. Trigger and Close requests happen immediately and must be acknowledged by setting `open` to `true` or `false` in `on_open` and `on_close` respectively. Escape reports reason `escape`; explicit Close reports `close`. See [DIALOG.md](DIALOG.md) for focus fallback, patch continuity, scroll locking, and deferred features.
+
+For confirmation flows opened by another component, omit both the trigger and `on_open`. In this controlled mode, a server `open: false` to `true` transition opens the native modal without emitting an open event; close behavior remains unchanged.
 
 ## Tooltip
 

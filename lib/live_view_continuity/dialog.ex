@@ -10,14 +10,14 @@ defmodule LiveViewContinuity.Dialog do
 
   attr(:id, :string, required: true)
   attr(:open, :boolean, required: true)
-  attr(:on_open, :string, required: true)
+  attr(:on_open, :string, default: nil)
   attr(:on_close, :string, required: true)
   attr(:initial_focus, :string, default: nil)
   attr(:class, :any, default: nil)
   attr(:dialog_class, :any, default: nil)
   attr(:rest, :global)
 
-  slot :trigger, required: true do
+  slot :trigger do
     attr(:class, :any)
   end
 
@@ -54,6 +54,7 @@ defmodule LiveViewContinuity.Dialog do
       {@rest}
     >
       <button
+        :if={@trigger_entry}
         id={@id <> "-trigger"}
         type="button"
         class={@trigger_entry[:class]}
@@ -133,8 +134,14 @@ defmodule LiveViewContinuity.Dialog do
             };
             this.onClose = () => this.closed();
             this.onFocus = event => { if (event.target.id) this.focusedId = event.target.id; };
+            this.onDocumentFocus = event => {
+              if (!this.trigger() && !this.popup()?.open && !this.el.contains(event.target)) {
+                this.returnFocus = event.target;
+              }
+            };
             this.onKey = event => this.key(event);
             this.el.addEventListener("click", this.onClick);
+            document.addEventListener("focusin", this.onDocumentFocus);
             this.bind();
             this.reconcile(false);
           },
@@ -143,11 +150,15 @@ defmodule LiveViewContinuity.Dialog do
             this.wasOpen = dialog?.open || false;
             this.hadFocus = !!dialog?.contains(document.activeElement);
             this.focusedId = this.hadFocus ? document.activeElement.id || null : null;
+            if (!this.trigger() && !dialog?.open && document.activeElement !== document.body) {
+              this.returnFocus = document.activeElement;
+            }
           },
           updated() { this.bind(); this.reconcile(true); },
           destroyed() {
             this.unbindPopup();
             this.el.removeEventListener("click", this.onClick);
+            document.removeEventListener("focusin", this.onDocumentFocus);
             unlock(this);
           },
           trigger() { return this.el.querySelector(`#${CSS.escape(this.el.id)}-trigger`); },
@@ -187,7 +198,7 @@ defmodule LiveViewContinuity.Dialog do
           click(event) {
             const trigger = event.target.closest("[data-lvc-dialog-trigger]");
             const close = event.target.closest("[data-lvc-dialog-close]");
-            if (trigger === this.trigger()) {
+            if (trigger && trigger === this.trigger()) {
               if (!this.popup().open) {
                 this.pendingIntent = "open";
                 this.openNative();
@@ -215,6 +226,7 @@ defmodule LiveViewContinuity.Dialog do
           },
           openNative() {
             const popup = this.popup();
+            if (!this.trigger() && !this.returnFocus) this.returnFocus = document.activeElement;
             popup.showModal();
             lock(this);
             this.reflect(true);
@@ -233,7 +245,7 @@ defmodule LiveViewContinuity.Dialog do
           },
           reflect(open) {
             this.el.dataset.lvcOpen = String(open);
-            this.trigger().setAttribute("aria-expanded", String(open));
+            this.trigger()?.setAttribute("aria-expanded", String(open));
             if (open) delete this.el.dataset.lvcCloseReason;
           },
           closed() {
@@ -248,8 +260,11 @@ defmodule LiveViewContinuity.Dialog do
             }
             setTimeout(() => {
               const active = document.activeElement;
-              const trigger = this.trigger();
-              if ((active === document.body || active === this.popup()) && trigger.isConnected) focusElement(trigger);
+              const popup = this.popup();
+              const target = this.trigger() || this.returnFocus;
+              const stranded = active === document.body || active === popup || (!popup.open && popup.contains(active));
+              if (stranded && target?.isConnected) focusElement(target);
+              this.returnFocus = null;
             }, 0);
           }
         };
@@ -259,11 +274,13 @@ defmodule LiveViewContinuity.Dialog do
   end
 
   defp assign_entries!(assigns) do
-    trigger = one!(assigns.trigger, "trigger", true)
+    trigger = one!(assigns.trigger, "trigger", false)
     title = one!(assigns.title, "title", true)
     description = one!(assigns.description, "description", false)
     close = one!(assigns.close, "close", true)
     one!(assigns.inner_block, "body", true)
+
+    validate_mode!(trigger, assigns.on_open)
 
     assigns
     |> assign(:trigger_entry, trigger)
@@ -277,6 +294,16 @@ defmodule LiveViewContinuity.Dialog do
 
   defp one!(entries, name, _),
     do: raise(ArgumentError, "dialog requires exactly one #{name} slot, got: #{length(entries)}")
+
+  defp validate_mode!(nil, nil), do: :ok
+
+  defp validate_mode!(nil, _on_open),
+    do: raise(ArgumentError, "controlled dialog without a trigger must omit on_open")
+
+  defp validate_mode!(_trigger, on_open) when is_binary(on_open) and on_open != "", do: :ok
+
+  defp validate_mode!(_trigger, _on_open),
+    do: raise(ArgumentError, "dialog with a trigger requires a non-empty on_open")
 
   defp validate_id!(id) do
     if id == "" or String.contains?(id, <<0>>) or Regex.match?(~r/[\t\n\f\r ]/, id),

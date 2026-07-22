@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 — 2026-07-22
+
+- Add a controlled Dialog mode that omits the trigger and `on_open` for server-driven confirmation flows while preserving native modal, close, focus, and patch-continuity behavior.
+
 ## 0.3.0 — 2026-07-22
 
 - Add native LiveView `navigate` items to Menu while preserving link semantics, disabled behavior, roving focus, typeahead, and patch identity.

@@ -55,6 +55,9 @@ defmodule ContinuityFixtureWeb.MenuLive do
        dialog_positive: true,
        dialog_opens: [],
        dialog_closes: [],
+       controlled_dialog_open: false,
+       controlled_dialog_revision: 0,
+       controlled_dialog_closes: [],
        tooltip_revision: 0,
        tooltip_delay: 120,
        tooltip_disabled: false,
@@ -283,6 +286,27 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <output id="dialog-revision">{@dialog_revision}</output>
       <output id="dialog-opens">{Enum.join(@dialog_opens, ",")}</output>
       <output id="dialog-closes">{Enum.join(@dialog_closes, ",")}</output>
+
+      <h2>Controlled dialog fixture</h2>
+      <button id="controlled-dialog-open" phx-click="controlled_dialog_open">
+        Open controlled dialog
+      </button>
+      <.dialog
+        id="controlled-dialog"
+        open={@controlled_dialog_open}
+        on_close="controlled_dialog_close"
+        initial_focus="#controlled-dialog-initial"
+        data-revision={@controlled_dialog_revision}
+      >
+        <:title>Controlled fixture dialog</:title>
+        <:description>Server-opened native modal conformance fixture</:description>
+        <h3 id="controlled-dialog-initial" tabindex="-1">Controlled content</h3>
+        <button id="controlled-dialog-patch" type="button" phx-click="controlled_dialog_patch">
+          Patch controlled dialog
+        </button>
+        <:close>Close controlled dialog</:close>
+      </.dialog>
+      <output id="controlled-dialog-closes">{Enum.join(@controlled_dialog_closes, ",")}</output>
 
       <h2>Tooltip fixture</h2>
       <span id="fixture-help">Existing description</span>
@@ -519,6 +543,20 @@ defmodule ContinuityFixtureWeb.MenuLive do
   def handle_event("dialog_close", %{"reason" => reason}, socket) do
     {:noreply, update(socket, :dialog_closes, &(&1 ++ [reason]))}
   end
+
+  def handle_event("controlled_dialog_open", _, socket),
+    do: {:noreply, assign(socket, :controlled_dialog_open, true)}
+
+  def handle_event("controlled_dialog_close", %{"reason" => reason}, socket) do
+    {:noreply,
+     assign(socket,
+       controlled_dialog_open: false,
+       controlled_dialog_closes: socket.assigns.controlled_dialog_closes ++ [reason]
+     )}
+  end
+
+  def handle_event("controlled_dialog_patch", _, socket),
+    do: {:noreply, update(socket, :controlled_dialog_revision, &(&1 + 1))}
 
   def handle_event("radio_change", %{"value" => value}, socket)
       when is_binary(value) or is_nil(value) do

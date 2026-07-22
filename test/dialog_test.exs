@@ -46,9 +46,38 @@ defmodule LiveViewContinuity.DialogTest do
     refute html =~ "aria-describedby"
   end
 
+  test "renders a controlled dialog without a trigger or open callback" do
+    html = render_dialog(trigger: [], on_open: nil, open: true)
+
+    assert html =~ ~s(data-lvc-desired-open="true")
+    refute html =~ ~s(id="confirm-trigger")
+    refute html =~ "data-lvc-dialog-trigger"
+    refute html =~ "data-lvc-on-open"
+    refute html =~ "aria-controls"
+    refute html =~ "aria-expanded"
+  end
+
+  test "requires trigger and on_open to be supplied together" do
+    assert_raise ArgumentError, ~r/without a trigger must omit on_open/, fn ->
+      render_dialog(trigger: [])
+    end
+
+    assert_raise ArgumentError, ~r/with a trigger requires a non-empty on_open/, fn ->
+      render_dialog(on_open: nil)
+    end
+
+    assert_raise ArgumentError, ~r/with a trigger requires a non-empty on_open/, fn ->
+      render_dialog(on_open: "")
+    end
+  end
+
   test "rejects unsafe IDs and incorrect slot cardinality" do
     assert_raise ArgumentError, ~r/dialog id/, fn -> render_dialog(id: "bad id") end
-    assert_raise ArgumentError, ~r/exactly one trigger/, fn -> render_dialog(trigger: []) end
+
+    assert_raise ArgumentError, ~r/exactly one trigger/, fn ->
+      render_dialog(trigger: [slot("one"), slot("two")])
+    end
+
     assert_raise ArgumentError, ~r/exactly one title/, fn -> render_dialog(title: []) end
 
     assert_raise ArgumentError, ~r/exactly one description/, fn ->

@@ -584,6 +584,43 @@ async function runDialog(page) {
   }, originalScrollStyle);
 }
 
+async function runControlledDialog(page) {
+  const root = page.locator("#controlled-dialog");
+  const opener = page.locator("#controlled-dialog-open");
+  const popup = page.locator("#controlled-dialog-popup");
+  const close = page.locator("#controlled-dialog-close");
+  const history = async () => (await page.locator("#controlled-dialog-closes").textContent()).trim().split(",").filter(Boolean);
+
+  assert.equal(await page.locator("#controlled-dialog-trigger").count(), 0);
+  assert.equal(await root.getAttribute("data-lvc-on-open"), null);
+  assert.equal(await popup.getAttribute("aria-labelledby"), "controlled-dialog-title");
+
+  await opener.focus();
+  await opener.click();
+  await page.waitForFunction(() => document.querySelector("#controlled-dialog-popup").matches(":modal"));
+  await focusId(page, "controlled-dialog-initial");
+  assert.equal(await root.getAttribute("data-lvc-open"), "true");
+
+  const popupHandle = await popup.elementHandle();
+  await page.locator("#controlled-dialog-patch").click();
+  await page.waitForFunction(() => document.querySelector("#controlled-dialog").dataset.revision === "1");
+  assert.equal(await page.evaluate(([a, b]) => a === b, [popupHandle, await popup.elementHandle()]), true);
+  assert.equal(await popup.evaluate(element => element.matches(":modal")), true);
+
+  await close.click();
+  await page.waitForFunction(() => document.querySelector("#controlled-dialog").dataset.lvcOpen === "false");
+  await page.waitForFunction(() => document.querySelector("#controlled-dialog-closes").textContent.trim() === "close");
+  assert.deepEqual(await history(), ["close"]);
+  await focusId(page, "controlled-dialog-open");
+
+  await opener.click();
+  await page.waitForFunction(() => document.querySelector("#controlled-dialog-popup").matches(":modal"));
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => document.querySelector("#controlled-dialog-closes").textContent.trim() === "close,escape");
+  assert.deepEqual(await history(), ["close", "escape"]);
+  await focusId(page, "controlled-dialog-open");
+}
+
 async function runTooltip(page) {
   const root = page.locator("#fixture-tooltip");
   const trigger = page.locator("#fixture-tooltip-trigger");
@@ -662,6 +699,7 @@ async function runTooltip(page) {
   await page.waitForFunction(() => document.querySelector("#fixture-tooltip-popup").matches(":popover-open"));
   await trigger.locator("span").click();
   assert.equal(await isOpen(), false);
+  await page.mouse.move(0, 0);
   await page.locator("#outside").focus();
   await trigger.focus();
   await trigger.evaluate(element => element.click());
@@ -1009,6 +1047,7 @@ async function run(browserType, name, iteration) {
 
     await runTabs(page);
     await runDialog(page);
+    await runControlledDialog(page);
     await runActionTooltip(page);
     await runTooltip(page);
     await runAccordion(page);
