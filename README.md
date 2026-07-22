@@ -8,10 +8,10 @@ This independent community project explores a narrow ownership model: LiveView k
 
 ## Installation
 
-Use a path dependency while the project is experimental:
+Add LiveView Continuity to your dependencies:
 
 ```elixir
-{:liveview_continuity, path: "../liveview-continuity"}
+{:liveview_continuity, "~> 0.1.0"}
 ```
 
 The package requires Elixir 1.18 or newer, Phoenix 1.8 or newer, and Phoenix LiveView 1.1 or newer. Phoenix 1.8 is required by colocated hooks. Add the LiveView compiler to the consuming project:
@@ -115,7 +115,7 @@ Tooltip renders an always-mounted, non-interactive native manual popover. Mouse 
 
 ## Non-scope
 
-The first slice intentionally excludes selection, check/radio items, submenus, portals, detached or multiple triggers, and a positioning engine. It also excludes a generic state machine, arbitrary JavaScript assertion API, component generator, CSS framework, and design tokens.
+The 0.1 Menu intentionally excludes selection, check/radio menu items, submenus, portals, detached or multiple triggers, and a positioning engine. The package also excludes a generic state machine, arbitrary JavaScript assertion API, component generator, CSS framework, and design tokens.
 
 ## Accordion
 
@@ -157,7 +157,7 @@ mix live_interaction_contracts.check \
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.
 
-The LIC v1 contracts honestly check native surface state, node identity, focus, and owned ARIA attributes around acknowledged patches. Tooltip's LIC case proves retained popup identity plus source-exit close and ARIA cleanup; its focused-open continuity is verified by the three-engine application-specific Playwright driver. Rich interaction semantics stay in that driver because LIC 1.3 has no arbitrary assertion surface. An intentionally broken red fixture is not included in this slice; capturing a checked-in red-path proof is a release blocker before any Hex publication and a candidate for a future LIC 1.4 evidence workflow.
+The LIC v1 contracts honestly check native surface state, node identity, focus, and owned ARIA attributes around acknowledged patches. Tooltip's LIC case proves retained popup identity plus source-exit close and ARIA cleanup; its focused-open continuity is verified by the three-engine application-specific Playwright driver. Rich interaction semantics stay in that driver because LIC 1.3 has no arbitrary assertion surface. Negative controls that prove verifier sensitivity belong to the independently released Live Interaction Contracts project; this package owns positive conformance for its shipped components.
 
 ## Inspiration and status
 

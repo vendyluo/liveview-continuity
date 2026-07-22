@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0-dev
+## 0.1.0 — 2026-07-22
 
 - Add the first vertical slice: an unstyled, action-only, patch-safe LiveView Menu.
 - Add the second vertical slice: unstyled, horizontal, manual-activation, patch-safe Tabs.

@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Package (Elixir ${{ matrix.elixir }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: "1.18.4"
+            otp: "27"
+          - elixir: "1.20.0"
+            otp: "28"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: npm ci
+      - run: mix deps.get
+      - run: mix format --check-formatted
+      - run: mix compile --warnings-as-errors
+      - run: mix test
+      - run: node --check playwright/conformance.mjs
+      - run: bash -n test/package-smoke.sh
+      - run: test/package-smoke.sh
+      - run: mix docs
+
+  browser:
+    name: Browser conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.20.0"
+          otp-version: "28"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+      - name: Build fixture assets
+        run: |
+          NODE_PATH="$PWD/deps:$PWD/_build/dev" npx esbuild fixture/assets/js/app.js \
+            --bundle --target=es2022 --outfile=fixture/priv/static/assets/app.js
+      - name: Browser and contract conformance
+        run: |
+          set -euo pipefail
+          mix run fixture/server.exs >/tmp/liveview-continuity-server.log 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+
+          for _ in $(seq 1 60); do
+            curl -sf -o /dev/null http://127.0.0.1:4140/ && break
+            kill -0 "$APP_PID" 2>/dev/null || {
+              cat /tmp/liveview-continuity-server.log
+              exit 1
+            }
+            sleep 1
+          done
+          curl -sf -o /dev/null http://127.0.0.1:4140/
+
+          npm run test:browser
+
+          for contract in \
+            menu_patch.json \
+            tabs_patch.json \
+            dialog_patch.json \
+            tooltip_patch.json \
+            accordion_patch.json \
+            radio_group_patch.json
+          do
+            mix live_interaction_contracts.check \
+              --url http://127.0.0.1:4140 \
+              --contract "test/interaction_contracts/$contract"
+          done
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-conformance-failure
+          path: |
+            /tmp/liveview-continuity-server.log
+            live-interaction-contracts-result.json
+          if-no-files-found: ignore

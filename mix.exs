@@ -1,10 +1,13 @@
 defmodule LiveViewContinuity.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+  @source_url "https://github.com/vendyluo/liveview-continuity"
+
   def project do
     [
       app: :liveview_continuity,
-      version: "0.1.0-dev",
+      version: @version,
       elixir: ">= 1.18.0",
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -24,7 +27,9 @@ defmodule LiveViewContinuity.MixProject do
           "CHANGELOG.md"
         ]
       ],
-      description: "Contract-backed, patch-safe interaction primitives for Phoenix LiveView."
+      description: "Contract-backed, patch-safe interaction primitives for Phoenix LiveView.",
+      source_url: @source_url,
+      homepage_url: @source_url
     ]
   end
 
@@ -47,7 +52,7 @@ defmodule LiveViewContinuity.MixProject do
   defp package do
     [
       licenses: ["MIT"],
-      links: %{},
+      links: %{"GitHub" => @source_url},
       files:
         ~w(lib mix.exs README.md MENU.md TABS.md DIALOG.md TOOLTIP.md ACCORDION.md RADIO_GROUP.md CHANGELOG.md LICENSE)
     ]
