@@ -717,6 +717,48 @@ async function runTooltip(page) {
   assert.equal(await page.locator("#fixture-tooltip-popup").evaluate(el => el.matches(":popover-open")), false);
 }
 
+async function runActionTooltip(page) {
+  const root = page.locator("#fixture-action-tooltip");
+  const trigger = page.locator("#fixture-action-tooltip-trigger");
+  const popup = page.locator("#fixture-action-tooltip-popup");
+
+  assert.equal(await trigger.getAttribute("aria-label"), "Remove fixture record");
+  assert.equal(await trigger.getAttribute("phx-click"), "tooltip_action");
+  assert.equal(await trigger.getAttribute("phx-value-id"), "record-42");
+  assert.equal(await trigger.getAttribute("phx-value-source"), "action-tooltip");
+
+  await trigger.focus();
+  await page.waitForFunction(() =>
+    document.querySelector("#fixture-action-tooltip-popup").matches(":popover-open")
+  );
+
+  const rootHandle = await root.elementHandle();
+  const triggerHandle = await trigger.elementHandle();
+  const popupHandle = await popup.elementHandle();
+  await trigger.click();
+  await page.waitForFunction(() =>
+    document.querySelector("#action-tooltip-events").textContent.trim() === "record-42"
+  );
+
+  assert.equal(await popup.evaluate(element => element.matches(":popover-open")), false);
+  assert.equal(await trigger.getAttribute("aria-describedby"), null);
+  assert.equal(await root.getAttribute("data-revision"), "1");
+  assert.equal(await page.evaluate(([a, b]) => a === b, [rootHandle, await root.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [triggerHandle, await trigger.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [popupHandle, await popup.elementHandle()]), true);
+  assert.equal(await trigger.getAttribute("aria-label"), "Remove fixture record");
+  assert.equal(await trigger.getAttribute("phx-click"), "tooltip_action");
+
+  await page.locator("#action-tooltip-barrier").click();
+  await page.waitForFunction(() =>
+    document.querySelector("#action-tooltip-barrier-revision").textContent.trim() === "1"
+  );
+
+  assert.equal((await page.locator("#action-tooltip-events").textContent()).trim(), "record-42");
+  assert.equal(await root.getAttribute("data-revision"), "1");
+  assert.equal((await page.locator("#action-tooltip-events").textContent()).trim().split(",").length, 1);
+}
+
 async function run(browserType, name, iteration) {
   const browser = await browserType.launch();
   const context = await browser.newContext();
@@ -883,6 +925,7 @@ async function run(browserType, name, iteration) {
 
     await runTabs(page);
     await runDialog(page);
+    await runActionTooltip(page);
     await runTooltip(page);
     await runAccordion(page);
     await runRadioGroup(page);

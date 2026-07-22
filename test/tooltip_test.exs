@@ -40,6 +40,60 @@ defmodule LiveViewContinuity.TooltipTest do
     assert html =~ ~s(data-test="root")
   end
 
+  test "renders allowed action and accessible-name attributes on the trigger" do
+    html =
+      render_tooltip(
+        trigger_attrs: %{
+          "aria-label" => "Remove tag",
+          "phx-click" => "remove_tag",
+          "phx-target" => "#owner",
+          "phx-value-tag-id" => "tag-42",
+          "phx-value-source" => "tooltip"
+        }
+      )
+
+    assert html =~ ~s(aria-label="Remove tag")
+    assert html =~ ~s(phx-click="remove_tag")
+    assert html =~ ~s(phx-target="#owner")
+    assert html =~ ~s(phx-value-tag-id="tag-42")
+    assert html =~ ~s(phx-value-source="tooltip")
+
+    [root, trigger] = String.split(html, "<button", parts: 2)
+    refute root =~ "remove_tag"
+    assert trigger =~ ~s(id="help-trigger")
+    assert trigger =~ ~s(type="button")
+    assert trigger =~ ~s(data-lvc-tooltip-trigger)
+  end
+
+  test "rejects trigger attributes owned by the component or outside the action seam" do
+    for name <- [
+          "id",
+          "type",
+          "class",
+          "aria-describedby",
+          "phx-hook",
+          "phx-mounted",
+          "data-lvc-tooltip-trigger",
+          "disabled",
+          "tabindex",
+          "phx-disable-with",
+          "aria-expanded",
+          "phx-value-"
+        ] do
+      assert_raise ArgumentError, ~r/trigger_attrs only accepts/, fn ->
+        render_tooltip(trigger_attrs: %{name => "override"})
+      end
+    end
+
+    assert_raise ArgumentError, ~r/trigger_attrs must be a map/, fn ->
+      render_tooltip(trigger_attrs: ["phx-click": "remove_tag"])
+    end
+
+    assert_raise ArgumentError, ~r/duplicate attribute aria-label/, fn ->
+      render_tooltip(trigger_attrs: %{:"aria-label" => "one", "aria-label" => "two"})
+    end
+  end
+
   test "validates IDs, slot cardinality, delay, and base IDREFs" do
     assert_raise ArgumentError, ~r/tooltip id/, fn -> render_tooltip(id: "bad id") end
     assert_raise ArgumentError, ~r/exactly one trigger/, fn -> render_tooltip(trigger: []) end

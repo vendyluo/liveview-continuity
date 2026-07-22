@@ -14,6 +14,7 @@ defmodule LiveViewContinuity.Tooltip do
   attr(:describedby, :string, default: nil)
   attr(:class, :any, default: nil)
   attr(:trigger_class, :any, default: nil)
+  attr(:trigger_attrs, :map, default: %{})
   attr(:tooltip_class, :any, default: nil)
   attr(:rest, :global)
 
@@ -24,9 +25,14 @@ defmodule LiveViewContinuity.Tooltip do
     validate_id!(assigns.id)
     validate_delay!(assigns.delay)
     validate_idrefs!(assigns.describedby)
+    trigger_attrs = normalize_trigger_attrs!(assigns.trigger_attrs)
     trigger = one!(assigns.trigger, "trigger")
     one!(assigns.inner_block, "body")
-    assigns = assign(assigns, :trigger_entry, trigger)
+
+    assigns =
+      assigns
+      |> assign(:trigger_attrs, trigger_attrs)
+      |> assign(:trigger_entry, trigger)
 
     ~H"""
     <div
@@ -42,6 +48,7 @@ defmodule LiveViewContinuity.Tooltip do
       {@rest}
     >
       <button
+        {@trigger_attrs}
         id={@id <> "-trigger"}
         type="button"
         class={@trigger_class}
@@ -253,4 +260,37 @@ defmodule LiveViewContinuity.Tooltip do
 
   defp validate_idrefs!(_),
     do: raise(ArgumentError, "tooltip describedby must be an IDREF string")
+
+  defp normalize_trigger_attrs!(attrs) when is_map(attrs) do
+    Enum.reduce(attrs, %{}, fn {key, value}, normalized ->
+      name = normalize_trigger_attr_name!(key)
+
+      if Map.has_key?(normalized, name),
+        do: raise(ArgumentError, "tooltip trigger_attrs contains duplicate attribute #{name}")
+
+      Map.put(normalized, name, value)
+    end)
+  end
+
+  defp normalize_trigger_attrs!(_),
+    do: raise(ArgumentError, "tooltip trigger_attrs must be a map")
+
+  defp normalize_trigger_attr_name!(key) when is_atom(key) or is_binary(key) do
+    name = to_string(key)
+
+    if name in ["aria-label", "phx-click", "phx-target"] or
+         Regex.match?(~r/\Aphx-value-[a-z0-9_-]+\z/, name) do
+      name
+    else
+      raise ArgumentError,
+            "tooltip trigger_attrs only accepts aria-label, phx-click, phx-target, and phx-value-*"
+    end
+  end
+
+  defp normalize_trigger_attr_name!(_),
+    do:
+      raise(
+        ArgumentError,
+        "tooltip trigger_attrs only accepts aria-label, phx-click, phx-target, and phx-value-*"
+      )
 end

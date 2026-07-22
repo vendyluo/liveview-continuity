@@ -11,7 +11,7 @@ This independent community project explores a narrow ownership model: LiveView k
 Add LiveView Continuity to your dependencies:
 
 ```elixir
-{:liveview_continuity, "~> 0.1.0"}
+{:liveview_continuity, "~> 0.2.0"}
 ```
 
 The package requires Elixir 1.18 or newer, Phoenix 1.8 or newer, and Phoenix LiveView 1.1 or newer. Phoenix 1.8 is required by colocated hooks. Add the LiveView compiler to the consuming project:
@@ -111,7 +111,25 @@ Dialog uses only native `showModal()`: the server owns desired `open` intent whi
 </.tooltip>
 ```
 
+An icon-only trigger may also perform a LiveView action through the narrow `trigger_attrs` seam:
+
+```heex
+<.tooltip
+  id={"remove-tag-#{tag.id}"}
+  trigger_attrs={%{
+    "aria-label" => "Remove #{tag.name}",
+    "phx-click" => "remove_tag",
+    "phx-value-tag-id" => tag.id
+  }}
+>
+  <:trigger>×</:trigger>
+  Remove {tag.name}
+</.tooltip>
+```
+
 Tooltip renders an always-mounted, non-interactive native manual popover. Mouse hover opens after `delay`; keyboard or programmatic focus opens immediately. Pointer and focus sources combine independently, while Escape or a trigger press dismisses without moving focus. LiveView owns content, delay, disabled state, existence, and optional base description tokens; the browser owns effective open state, timer safety, native Popover state, and the tooltip token in `aria-describedby`. Consumers own CSS, positioning, and `pointer-events: none`. See [TOOLTIP.md](TOOLTIP.md) for patch behavior, accessibility limits, and deferred scope.
+
+For cross-browser positioning and Dialog first-paint guidance, see [Application integration](APPLICATION_INTEGRATION.md).
 
 ## Non-scope
 

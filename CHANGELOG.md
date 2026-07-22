@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0 — 2026-07-22
+
+- Add a narrow `trigger_attrs` seam to Tooltip for `aria-label`, `phx-click`, `phx-target`, and `phx-value-*` attributes while preserving component ownership of identity, button semantics, and descriptive ARIA state.
+- Add real-application guidance for cross-browser Tooltip positioning and eagerly rendered Dialog content.
+
 ## 0.1.0 — 2026-07-22
 
 - Add the first vertical slice: an unstyled, action-only, patch-safe LiveView Menu.

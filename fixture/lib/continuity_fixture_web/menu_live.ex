@@ -48,6 +48,9 @@ defmodule ContinuityFixtureWeb.MenuLive do
        tooltip_disabled: false,
        tooltip_present: true,
        tooltip_base: "fixture-help",
+       action_tooltip_revision: 0,
+       action_tooltip_events: [],
+       action_tooltip_barrier: 0,
        accordion_items: [
          %{id: "shipping", label: "Shipping"},
          %{id: "disabled", label: "Unavailable", disabled: true},
@@ -288,6 +291,26 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <button id="tooltip-remove" phx-click="tooltip_remove">Remove tooltip</button>
       <button id="tooltip-reset" phx-click="tooltip_reset">Reset tooltip</button>
       <output id="tooltip-revision">{@tooltip_revision}</output>
+
+      <.tooltip
+        id="fixture-action-tooltip"
+        delay={0}
+        trigger_attrs={
+          %{
+            "aria-label" => "Remove fixture record",
+            "phx-click" => "tooltip_action",
+            "phx-value-id" => "record-42",
+            "phx-value-source" => "action-tooltip"
+          }
+        }
+        data-revision={@action_tooltip_revision}
+      >
+        <:trigger><span aria-hidden="true">×</span></:trigger>
+        Remove fixture record
+      </.tooltip>
+      <output id="action-tooltip-events">{Enum.join(@action_tooltip_events, ",")}</output>
+      <button id="action-tooltip-barrier" phx-click="tooltip_action_barrier">Action barrier</button>
+      <output id="action-tooltip-barrier-revision">{@action_tooltip_barrier}</output>
     </main>
     """
   end
@@ -610,6 +633,21 @@ defmodule ContinuityFixtureWeb.MenuLive do
        tooltip_base: "fixture-help"
      )}
   end
+
+  def handle_event(
+        "tooltip_action",
+        %{"id" => "record-42", "source" => "action-tooltip"},
+        socket
+      ) do
+    {:noreply,
+     assign(socket,
+       action_tooltip_events: socket.assigns.action_tooltip_events ++ ["record-42"],
+       action_tooltip_revision: socket.assigns.action_tooltip_revision + 1
+     )}
+  end
+
+  def handle_event("tooltip_action_barrier", _params, socket),
+    do: {:noreply, update(socket, :action_tooltip_barrier, &(&1 + 1))}
 
   defp revise(socket, items, mode) do
     {:noreply, assign(socket, items: items, mode: mode, revision: socket.assigns.revision + 1)}
