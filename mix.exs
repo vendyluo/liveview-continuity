@@ -13,7 +13,15 @@ defmodule LiveViewContinuity.MixProject do
       package: package(),
       docs: [
         main: "readme",
-        extras: ["README.md", "MENU.md", "TABS.md", "DIALOG.md", "TOOLTIP.md", "CHANGELOG.md"]
+        extras: [
+          "README.md",
+          "MENU.md",
+          "TABS.md",
+          "DIALOG.md",
+          "TOOLTIP.md",
+          "ACCORDION.md",
+          "CHANGELOG.md"
+        ]
       ],
       description: "Contract-backed, patch-safe interaction primitives for Phoenix LiveView."
     ]
@@ -39,7 +47,8 @@ defmodule LiveViewContinuity.MixProject do
     [
       licenses: ["MIT"],
       links: %{},
-      files: ~w(lib mix.exs README.md MENU.md TABS.md DIALOG.md TOOLTIP.md CHANGELOG.md LICENSE)
+      files:
+        ~w(lib mix.exs README.md MENU.md TABS.md DIALOG.md TOOLTIP.md ACCORDION.md CHANGELOG.md LICENSE)
     ]
   end
 end

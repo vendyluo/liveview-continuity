@@ -126,6 +126,134 @@ async function runTabs(page) {
   assert.equal(await page.locator("#fixture-tabs-tab-alpha").getAttribute("tabindex"), "0");
 }
 
+async function runAccordion(page) {
+  const root = page.locator("#fixture-accordion");
+  const shipping = page.locator("#fixture-accordion-trigger-shipping");
+  const returns = page.locator("#fixture-accordion-trigger-returns");
+  const eventCount = async () => (await page.locator("#accordion-events").textContent()).trim().split(";").filter(Boolean).length;
+  const revision = async () => Number(await root.getAttribute("data-revision"));
+  const waitRevision = async before => page.waitForFunction(value => Number(document.querySelector("#fixture-accordion").dataset.revision) > value, before);
+  const reset = async () => {
+    const before = await revision();
+    await page.locator("#accordion-reset").click();
+    await waitRevision(before);
+    assert.equal(await eventCount(), 0);
+    assert.equal(await shipping.getAttribute("aria-expanded"), "true");
+  };
+  assert.equal(await shipping.getAttribute("aria-controls"), "fixture-accordion-panel-shipping");
+  assert.equal(await page.locator("#fixture-accordion-panel-shipping").getAttribute("aria-labelledby"), await shipping.getAttribute("id"));
+  assert.equal(await shipping.getAttribute("aria-expanded"), "true");
+  assert.equal(await page.locator("#fixture-accordion-panel-returns").getAttribute("hidden"), "");
+
+  for (const mode of ["click", "Enter", "Space"]) {
+    await reset();
+    await returns.focus();
+    if (mode === "click") await returns.click(); else await page.keyboard.press(mode);
+    await page.waitForFunction(() => document.querySelector("#accordion-events").textContent.trim().split(";").filter(Boolean).length === 1);
+    assert.equal(await eventCount(), 1);
+    assert.equal(await returns.getAttribute("aria-expanded"), "true");
+    assert.equal(await shipping.getAttribute("aria-expanded"), "false");
+  }
+  await returns.click();
+  await page.waitForFunction(() => document.querySelector("#accordion-events").textContent.trim().split(";").filter(Boolean).length === 2);
+  assert.equal(await returns.getAttribute("aria-expanded"), "false");
+  assert.equal(await shipping.getAttribute("aria-expanded"), "false");
+
+  await reset();
+  const disabled = page.locator("#fixture-accordion-trigger-disabled");
+  await disabled.focus();
+  await disabled.evaluate(element => element.click());
+  const disabledRevision = await revision();
+  await page.locator("#accordion-patch").evaluate(el => el.click());
+  await waitRevision(disabledRevision);
+  assert.equal(await eventCount(), 0);
+  await page.keyboard.press("ArrowDown");
+  await focusId(page, "fixture-accordion-trigger-disabled");
+
+  // A nested multiple accordion owns only its own items and composes membership.
+  const one = page.locator("#fixture-accordion-multiple-trigger-one");
+  const two = page.locator("#fixture-accordion-multiple-trigger-two");
+  await one.click();
+  await page.waitForFunction(() => document.querySelector("#accordion-multiple-events").textContent.trim() === "1");
+  await two.click();
+  await page.waitForFunction(() => document.querySelector("#accordion-multiple-events").textContent.trim() === "2");
+  assert.equal(await one.getAttribute("aria-expanded"), "true");
+  assert.equal(await two.getAttribute("aria-expanded"), "true");
+  assert.equal(await shipping.getAttribute("aria-expanded"), "true");
+  assert.equal(await eventCount(), 0);
+  await one.click();
+  await page.waitForFunction(() => document.querySelector("#accordion-multiple-events").textContent.trim() === "3");
+  assert.equal(await one.getAttribute("aria-expanded"), "false");
+  assert.equal(await two.getAttribute("aria-expanded"), "true");
+
+  // Two intents compose from effective state before either server patch settles.
+  await reset();
+  await returns.evaluate(element => { element.click(); element.click(); });
+  await page.waitForFunction(() => document.querySelector("#accordion-events").textContent.trim().split(";").filter(Boolean).length === 2);
+  assert.equal(await returns.getAttribute("aria-expanded"), "false");
+  assert.equal(await shipping.getAttribute("aria-expanded"), "false");
+
+  await reset();
+  await returns.click();
+  await page.waitForFunction(() => document.querySelector("#accordion-events").textContent.trim().split(";").filter(Boolean).length === 1);
+  await returns.focus();
+  await focusId(page, "fixture-accordion-trigger-returns");
+  const itemHandle = await page.locator("[data-lvc-accordion-item][data-lvc-logical-id=returns]").elementHandle();
+  const triggerHandle = await returns.elementHandle();
+  const panelHandle = await page.locator("#fixture-accordion-panel-returns").elementHandle();
+  const patchRevision = await revision();
+  await page.locator("#accordion-patch").evaluate(el => el.click());
+  await waitRevision(patchRevision);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [itemHandle, await page.locator("[data-lvc-accordion-item][data-lvc-logical-id=returns]").elementHandle()]), true);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [triggerHandle, await returns.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [panelHandle, await page.locator("#fixture-accordion-panel-returns").elementHandle()]), true);
+  await focusId(page, "fixture-accordion-trigger-returns");
+  assert.equal(await returns.getAttribute("aria-expanded"), "true");
+
+  const reorderRevision = await revision();
+  await page.locator("#accordion-reorder").evaluate(el => el.click());
+  await waitRevision(reorderRevision);
+  await page.locator("#fixture-accordion-trigger-returns").filter({hasText: "renamed"}).waitFor();
+  assert.equal(await page.evaluate(([a, b]) => a === b, [triggerHandle, await returns.elementHandle()]), true);
+  await focusId(page, "fixture-accordion-trigger-returns");
+  assert.equal(await returns.getAttribute("aria-expanded"), "true");
+  const insertRevision = await revision();
+  await page.locator("#accordion-insert").evaluate(el => el.click());
+  await waitRevision(insertRevision);
+  await page.locator("#fixture-accordion-trigger-billing").waitFor();
+  assert.equal(await page.evaluate(([a, b]) => a === b, [triggerHandle, await returns.elementHandle()]), true);
+  await focusId(page, "fixture-accordion-trigger-returns");
+  assert.equal(await returns.getAttribute("aria-expanded"), "true");
+
+  // Removal prunes a pending value instead of leaving a sticky empty pending set.
+  await reset();
+  await returns.evaluate(element => element.click());
+  const removeRevision = await revision();
+  await page.locator("#accordion-remove").evaluate(el => el.click());
+  await waitRevision(removeRevision);
+  await returns.waitFor({state: "detached"});
+  const closeAfterRemoveRevision = await revision();
+  await page.locator("#accordion-server-close").evaluate(el => el.click());
+  await waitRevision(closeAfterRemoveRevision);
+  assert.equal(await root.getAttribute("data-lvc-values"), "[]");
+  assert.equal(await shipping.getAttribute("aria-expanded"), "false");
+
+  await reset();
+  await page.locator("#accordion-panel-input").focus();
+  const closeRevision = await revision();
+  await page.locator("#accordion-server-close").evaluate(el => el.click());
+  await waitRevision(closeRevision);
+  await focusId(page, "fixture-accordion-trigger-shipping");
+
+  await reset();
+  await page.locator("#accordion-outside").focus();
+  const outsideCloseRevision = await revision();
+  await page.locator("#accordion-server-close").evaluate(el => el.click());
+  await waitRevision(outsideCloseRevision);
+  await focusId(page, "accordion-outside");
+  assert.equal(await root.locator(":scope > [data-lvc-accordion-item]").count(), 3);
+}
+
 async function runDialog(page) {
   const root = page.locator("#fixture-dialog");
   const trigger = page.locator("#fixture-dialog-trigger");
@@ -293,7 +421,7 @@ async function runTooltip(page) {
   await page.mouse.move(0, 0);
   assert.equal(await isOpen(), true);
   await trigger.hover();
-  await page.locator("#outside").focus();
+  await page.locator("#tooltip-patch").focus();
   assert.equal(await isOpen(), true);
   await page.mouse.move(0, 0);
   await page.waitForFunction(() => !document.querySelector("#fixture-tooltip-popup").matches(":popover-open"));
@@ -548,6 +676,7 @@ async function run(browserType, name, iteration) {
     await runTabs(page);
     await runDialog(page);
     await runTooltip(page);
+    await runAccordion(page);
     console.log(`PASS ${name} context ${iteration}`);
   } finally {
     await context.close();

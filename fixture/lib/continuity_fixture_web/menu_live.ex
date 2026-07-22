@@ -4,6 +4,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
   import LiveViewContinuity.Tabs
   import LiveViewContinuity.Dialog
   import LiveViewContinuity.Tooltip
+  import LiveViewContinuity.Accordion
 
   @base_items [
     %{id: "alpha", label: "Álpha"},
@@ -45,7 +46,17 @@ defmodule ContinuityFixtureWeb.MenuLive do
        tooltip_delay: 120,
        tooltip_disabled: false,
        tooltip_present: true,
-       tooltip_base: "fixture-help"
+       tooltip_base: "fixture-help",
+       accordion_items: [
+         %{id: "shipping", label: "Shipping"},
+         %{id: "disabled", label: "Unavailable", disabled: true},
+         %{id: "returns", label: "Returns"}
+       ],
+       accordion_values: ["shipping"],
+       accordion_multiple_values: [],
+       accordion_revision: 0,
+       accordion_events: [],
+       accordion_multiple_events: []
      )}
   end
 
@@ -109,6 +120,51 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <output id="tabs-mode">{@tab_mode}</output>
       <output id="tabs-selected">{@selected}</output>
       <output id="tabs-selections">{Enum.join(@tab_selections, ",")}</output>
+
+      <h2>Accordion fixture</h2>
+      <.accordion
+        id="fixture-accordion"
+        values={@accordion_values}
+        on_change="accordion_change"
+        data-revision={@accordion_revision}
+      >
+        <:item
+          :for={item <- @accordion_items}
+          id={item.id}
+          label={item.label}
+          disabled={Map.get(item, :disabled, false)}
+        >
+          {item.label} content revision {@accordion_revision}
+          <input
+            :if={item.id == "shipping"}
+            id="accordion-panel-input"
+            aria-label="Accordion panel input"
+          />
+          <.accordion
+            :if={item.id == "shipping"}
+            id="fixture-accordion-multiple"
+            values={@accordion_multiple_values}
+            on_change="accordion_multiple_change"
+            multiple
+          >
+            <:item id="one" label="One">One content</:item>
+            <:item id="two" label="Two">Two content</:item>
+          </.accordion>
+          <output :if={item.id == "shipping"} id="accordion-multiple-events">
+            {length(@accordion_multiple_events)}
+          </output>
+        </:item>
+      </.accordion>
+      <input id="accordion-outside" aria-label="Outside accordion" />
+      <button id="accordion-patch" phx-click="accordion_patch">Patch accordion</button>
+      <button id="accordion-reorder" phx-click="accordion_reorder">Reorder accordion</button>
+      <button id="accordion-insert" phx-click="accordion_insert">Insert accordion item</button>
+      <button id="accordion-remove" phx-click="accordion_remove">Remove Returns</button>
+      <button id="accordion-server-close" phx-click="accordion_server_close">Server close</button>
+      <button id="accordion-reset" phx-click="accordion_reset">Reset accordion</button>
+      <output id="accordion-events">{Enum.map_join(@accordion_events, ";", fn {id, open, values} ->
+        "#{id}:#{open}:#{Enum.join(values, ",")}"
+      end)}</output>
 
       <h2>Dialog fixture</h2>
       <.dialog
@@ -266,6 +322,96 @@ defmodule ContinuityFixtureWeb.MenuLive do
     {:noreply,
      assign(socket, dialog_open: true, dialog_opens: socket.assigns.dialog_opens ++ ["open"])}
   end
+
+  def handle_event("accordion_change", %{"id" => id, "open" => open, "values" => values}, socket)
+      when is_boolean(open) and is_list(values) do
+    known = MapSet.new(socket.assigns.accordion_items, & &1.id)
+
+    if id not in known or Enum.any?(values, &(&1 not in known)),
+      do: raise(ArgumentError, "unknown accordion ID")
+
+    {:noreply,
+     assign(socket,
+       accordion_values: values,
+       accordion_events: socket.assigns.accordion_events ++ [{id, open, values}]
+     )}
+  end
+
+  def handle_event(
+        "accordion_multiple_change",
+        %{"id" => id, "open" => open, "values" => values},
+        socket
+      )
+      when id in ["one", "two"] and is_boolean(open) and is_list(values) do
+    if Enum.any?(values, &(&1 not in ["one", "two"])),
+      do: raise(ArgumentError, "unknown multiple accordion ID")
+
+    {:noreply,
+     assign(socket,
+       accordion_multiple_values: values,
+       accordion_multiple_events:
+         socket.assigns.accordion_multiple_events ++
+           [
+             {id, open, values}
+           ]
+     )}
+  end
+
+  def handle_event("accordion_patch", _, socket),
+    do: {:noreply, update(socket, :accordion_revision, &(&1 + 1))}
+
+  def handle_event("accordion_reorder", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(
+         :accordion_items,
+         &(Enum.reverse(&1)
+           |> Enum.map(fn item ->
+             if item.id == "returns", do: %{item | label: "Returns renamed"}, else: item
+           end))
+       )
+       |> update(:accordion_revision, &(&1 + 1))}
+
+  def handle_event("accordion_insert", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(:accordion_items, fn items ->
+         if Enum.any?(items, &(&1.id == "billing")),
+           do: items,
+           else: [%{id: "billing", label: "Billing"} | items]
+       end)
+       |> update(:accordion_revision, &(&1 + 1))}
+
+  def handle_event("accordion_remove", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(:accordion_items, &Enum.reject(&1, fn item -> item.id == "returns" end))
+       |> update(:accordion_values, &Enum.reject(&1, fn id -> id == "returns" end))
+       |> update(:accordion_revision, &(&1 + 1))}
+
+  def handle_event("accordion_server_close", _, socket),
+    do:
+      {:noreply,
+       socket |> assign(:accordion_values, []) |> update(:accordion_revision, &(&1 + 1))}
+
+  def handle_event("accordion_reset", _, socket),
+    do:
+      {:noreply,
+       assign(socket,
+         accordion_items: [
+           %{id: "shipping", label: "Shipping"},
+           %{id: "disabled", label: "Unavailable", disabled: true},
+           %{id: "returns", label: "Returns"}
+         ],
+         accordion_values: ["shipping"],
+         accordion_multiple_values: [],
+         accordion_events: [],
+         accordion_multiple_events: [],
+         accordion_revision: socket.assigns.accordion_revision + 1
+       )}
 
   def handle_event("dialog_close", %{"reason" => reason}, socket) do
     {:noreply, update(socket, :dialog_closes, &(&1 ++ [reason]))}

@@ -12,6 +12,7 @@ test -f "$TMP/package/lib/live_view_continuity/menu.ex"
 test -f "$TMP/package/lib/live_view_continuity/tabs.ex"
 test -f "$TMP/package/lib/live_view_continuity/dialog.ex"
 test -f "$TMP/package/lib/live_view_continuity/tooltip.ex"
+test -f "$TMP/package/lib/live_view_continuity/accordion.ex"
 test ! -e "$TMP/package/fixture"
 test ! -e "$TMP/package/playwright"
 
@@ -38,6 +39,7 @@ if (!hooks["LiveViewContinuity.Menu.Menu"]) throw new Error("Menu colocated hook
 if (!hooks["LiveViewContinuity.Tabs.Tabs"]) throw new Error("Tabs colocated hook missing");
 if (!hooks["LiveViewContinuity.Dialog.Dialog"]) throw new Error("Dialog colocated hook missing");
 if (!hooks["LiveViewContinuity.Tooltip.Tooltip"]) throw new Error("Tooltip colocated hook missing");
+if (!hooks["LiveViewContinuity.Accordion.Accordion"]) throw new Error("Accordion colocated hook missing");
 console.log("package hook ok");
 EOF
 

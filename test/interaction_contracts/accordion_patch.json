@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "continuity-accordion-survives-acknowledged-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-accordion"},
+  "activate": [{"type": "click", "selector": "#fixture-accordion-trigger-returns"}],
+  "patch": {
+    "trigger": {"type": "click", "selector": "#accordion-patch"},
+    "ack": {"type": "attribute_change", "selector": "#fixture-accordion", "attribute": "data-revision"}
+  },
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-accordion-trigger-returns", "after": "same"},
+    {"probe": "node_identity", "selector": "#fixture-accordion-panel-returns", "after": "same"},
+    {"probe": "attribute", "selector": "#fixture-accordion-trigger-returns", "attribute": "aria-expanded", "before": {"value": "true"}, "after": {"value": "true"}},
+    {"probe": "focus", "selector": "#fixture-accordion-trigger-returns", "before": {"active": true}, "after": {"active": false}}
+  ]
+}
