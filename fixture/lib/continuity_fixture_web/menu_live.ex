@@ -5,6 +5,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
   import LiveViewContinuity.Dialog
   import LiveViewContinuity.Tooltip
   import LiveViewContinuity.Accordion
+  import LiveViewContinuity.RadioGroup
 
   @base_items [
     %{id: "alpha", label: "Álpha"},
@@ -56,7 +57,18 @@ defmodule ContinuityFixtureWeb.MenuLive do
        accordion_multiple_values: [],
        accordion_revision: 0,
        accordion_events: [],
-       accordion_multiple_events: []
+       accordion_multiple_events: [],
+       radio_options: [
+         %{value: "email", label: "Email"},
+         %{value: "phone", label: "Phone"},
+         %{value: "disabled", label: "Disabled", disabled: true},
+         %{value: "mail", label: "Mail"}
+       ],
+       radio_value: "email",
+       radio_read_only: false,
+       radio_disabled: false,
+       radio_revision: 0,
+       radio_events: []
      )}
   end
 
@@ -165,6 +177,44 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <output id="accordion-events">{Enum.map_join(@accordion_events, ";", fn {id, open, values} ->
         "#{id}:#{open}:#{Enum.join(values, ",")}"
       end)}</output>
+
+      <h2>Radio Group fixture</h2>
+      <form id="radio-form">
+        <.radio_group
+          id="fixture-radio"
+          name="contact"
+          value={@radio_value}
+          on_change="radio_change"
+          label="Contact method"
+          required
+          read_only={@radio_read_only}
+          disabled={@radio_disabled}
+          data-revision={@radio_revision}
+        >
+          <:description>Choose one contact method.</:description>
+          <:option
+            :for={option <- @radio_options}
+            value={option.value}
+            label={option.label}
+            disabled={Map.get(option, :disabled, false)}
+          />
+        </.radio_group>
+        <button id="radio-native-reset" type="reset">Reset form</button>
+      </form>
+      <input id="radio-outside" />
+      <button id="radio-patch" phx-click="radio_patch">Patch radio</button>
+      <button id="radio-reorder" phx-click="radio_reorder">Reorder radio</button>
+      <button id="radio-insert" phx-click="radio_insert">Insert radio</button>
+      <button id="radio-remove" phx-click="radio_remove">Remove selected</button>
+      <button id="radio-server-nil" phx-click="radio_server_nil">Server nil</button>
+      <button id="radio-read-only" phx-click="radio_read_only">Read only</button>
+      <button id="radio-disable" phx-click="radio_disable">Disable</button>
+      <button id="radio-reset" phx-click="radio_reset">Reset radio fixture</button>
+      <output id="radio-events">{Enum.map_join(
+        @radio_events,
+        ",",
+        &if(&1 == nil, do: "nil", else: &1)
+      )}</output>
 
       <h2>Dialog fixture</h2>
       <.dialog
@@ -415,6 +465,82 @@ defmodule ContinuityFixtureWeb.MenuLive do
 
   def handle_event("dialog_close", %{"reason" => reason}, socket) do
     {:noreply, update(socket, :dialog_closes, &(&1 ++ [reason]))}
+  end
+
+  def handle_event("radio_change", %{"value" => value}, socket)
+      when is_binary(value) or is_nil(value) do
+    known = Enum.map(socket.assigns.radio_options, & &1.value)
+    if value != nil and value not in known, do: raise(ArgumentError, "unknown radio value")
+
+    {:noreply,
+     assign(socket,
+       radio_value: value,
+       radio_events: socket.assigns.radio_events ++ [value]
+     )}
+  end
+
+  def handle_event("radio_patch", _, socket),
+    do: {:noreply, update(socket, :radio_revision, &(&1 + 1))}
+
+  def handle_event("radio_reorder", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(
+         :radio_options,
+         &(Enum.reverse(&1)
+           |> Enum.map(fn option ->
+             if option.value == "phone", do: %{option | label: "Telephone"}, else: option
+           end))
+       )
+       |> update(:radio_revision, &(&1 + 1))}
+
+  def handle_event("radio_insert", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(:radio_options, fn options ->
+         if Enum.any?(options, &(&1.value == "chat")),
+           do: options,
+           else: options ++ [%{value: "chat", label: "Chat"}]
+       end)
+       |> update(:radio_revision, &(&1 + 1))}
+
+  def handle_event("radio_remove", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(
+         :radio_options,
+         &Enum.reject(&1, fn option -> option.value == socket.assigns.radio_value end)
+       )
+       |> assign(:radio_value, nil)
+       |> update(:radio_revision, &(&1 + 1))}
+
+  def handle_event("radio_server_nil", _, socket),
+    do: {:noreply, socket |> assign(:radio_value, nil) |> update(:radio_revision, &(&1 + 1))}
+
+  def handle_event("radio_read_only", _, socket),
+    do: {:noreply, socket |> assign(:radio_read_only, true) |> update(:radio_revision, &(&1 + 1))}
+
+  def handle_event("radio_disable", _, socket),
+    do: {:noreply, socket |> assign(:radio_disabled, true) |> update(:radio_revision, &(&1 + 1))}
+
+  def handle_event("radio_reset", _, socket) do
+    {:noreply,
+     assign(socket,
+       radio_options: [
+         %{value: "email", label: "Email"},
+         %{value: "phone", label: "Phone"},
+         %{value: "disabled", label: "Disabled", disabled: true},
+         %{value: "mail", label: "Mail"}
+       ],
+       radio_value: "email",
+       radio_read_only: false,
+       radio_disabled: false,
+       radio_events: [],
+       radio_revision: socket.assigns.radio_revision + 1
+     )}
   end
 
   def handle_event("dialog_patch", _, socket),

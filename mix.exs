@@ -20,6 +20,7 @@ defmodule LiveViewContinuity.MixProject do
           "DIALOG.md",
           "TOOLTIP.md",
           "ACCORDION.md",
+          "RADIO_GROUP.md",
           "CHANGELOG.md"
         ]
       ],
@@ -48,7 +49,7 @@ defmodule LiveViewContinuity.MixProject do
       licenses: ["MIT"],
       links: %{},
       files:
-        ~w(lib mix.exs README.md MENU.md TABS.md DIALOG.md TOOLTIP.md ACCORDION.md CHANGELOG.md LICENSE)
+        ~w(lib mix.exs README.md MENU.md TABS.md DIALOG.md TOOLTIP.md ACCORDION.md RADIO_GROUP.md CHANGELOG.md LICENSE)
     ]
   end
 end

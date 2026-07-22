@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "continuity-radio-group-survives-acknowledged-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-radio"},
+  "activate": [{"type": "click", "selector": "label[for='fixture-radio-option-phone']"}],
+  "patch": {
+    "trigger": {"type": "click", "selector": "#radio-patch"},
+    "ack": {"type": "attribute_change", "selector": "#fixture-radio", "attribute": "data-revision"}
+  },
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-radio-option-phone", "after": "same"},
+    {"probe": "attribute", "selector": "#fixture-radio", "attribute": "data-lvc-value", "before": {"value": "phone"}, "after": {"value": "phone"}},
+    {"probe": "attribute", "selector": "#fixture-radio-option-phone", "attribute": "data-lvc-checked", "before": {"value": "true"}, "after": {"value": "true"}},
+    {"probe": "focus", "selector": "#fixture-radio-option-phone", "before": {"active": true}, "after": {"active": false}}
+  ]
+}

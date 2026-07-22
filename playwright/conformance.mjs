@@ -24,6 +24,195 @@ async function open(page, key = "ArrowDown") {
   await page.locator("#fixture-menu-popup").waitFor({state: "visible"});
 }
 
+async function runRadioGroup(page) {
+  const root = page.locator("#fixture-radio");
+  const inputs = root.locator("[data-lvc-radio-input]");
+  const email = page.locator("#fixture-radio-option-email");
+  const phone = page.locator("#fixture-radio-option-phone");
+  const mail = page.locator("#fixture-radio-option-mail");
+  const eventCount = async () => (await page.locator("#radio-events").textContent()).trim().split(",").filter(Boolean).length;
+  const revision = async () => Number(await root.getAttribute("data-revision"));
+  const waitRevision = async before => page.waitForFunction(value => Number(document.querySelector("#fixture-radio").dataset.revision) > value, before);
+  const reset = async () => {
+    const before = await revision();
+    await page.locator("#radio-reset").click();
+    await waitRevision(before);
+    assert.equal(await eventCount(), 0);
+    assert.equal(await email.isChecked(), true);
+  };
+  assert.equal(await root.getAttribute("role"), "radiogroup");
+  assert.equal(await root.getAttribute("aria-labelledby"), "fixture-radio-legend");
+  assert.equal(await root.getAttribute("aria-describedby"), "fixture-radio-description");
+  assert.equal(await inputs.count(), 4);
+  assert.equal(await inputs.evaluateAll(nodes => nodes.every(node => node.name === "contact")), true);
+  assert.equal(await email.isChecked(), true);
+  assert.equal(await root.locator("input:checked").count(), 1);
+
+  await page.locator("label[for='fixture-radio-option-phone']").click();
+  assert.deepEqual(await page.locator("#radio-form").evaluate(form => [...new FormData(form).entries()]), [["contact", "phone"]]);
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone");
+  assert.equal(await eventCount(), 1);
+  assert.equal(await phone.isChecked(), true);
+  assert.equal(await root.locator("input:checked").count(), 1);
+  assert.equal(await root.getAttribute("data-lvc-value"), "phone");
+  assert.deepEqual(await page.locator("#radio-form").evaluate(form => [...new FormData(form).entries()]), [["contact", "phone"]]);
+
+  await reset();
+  await phone.focus();
+  await page.keyboard.press("Space");
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone");
+  assert.equal(await eventCount(), 1);
+  assert.equal(await phone.isChecked(), true);
+
+  await reset();
+  await email.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone");
+  await focusId(page, "fixture-radio-option-phone");
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone,mail");
+  await focusId(page, "fixture-radio-option-mail");
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone,mail,email");
+  await focusId(page, "fixture-radio-option-email");
+  assert.equal(await email.isChecked(), true);
+
+  // A stale email patch must not clear the latest email intent and briefly roll back to phone.
+  await reset();
+  const abaRevision = await revision();
+  await page.evaluate(() => {
+    const root = document.querySelector("#fixture-radio");
+    window.radioValueTrace = [];
+    window.radioValueObserver = new MutationObserver(() => window.radioValueTrace.push(root.dataset.lvcValue || null));
+    window.radioValueObserver.observe(root, {attributes: true, attributeFilter: ["data-lvc-value", "data-lvc-has-value"]});
+    document.querySelector("#radio-patch").click();
+    document.querySelector("#fixture-radio-option-phone").click();
+    document.querySelector("#fixture-radio-option-email").click();
+    queueMicrotask(() => { window.radioValueTrace = []; });
+  });
+  await waitRevision(abaRevision);
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone,email");
+  await page.waitForFunction(() => document.querySelector("#fixture-radio").dataset.lvcDesiredValue === "email");
+  assert.equal(await root.getAttribute("data-lvc-value"), "email");
+  assert.equal(await email.isChecked(), true);
+  assert.equal((await page.evaluate(() => {
+    window.radioValueObserver.disconnect();
+    return window.radioValueTrace;
+  })).includes("phone"), false);
+
+  // Reset wins even when the previous selection acknowledgment is still in flight.
+  await reset();
+  await page.evaluate(() => {
+    const root = document.querySelector("#fixture-radio");
+    window.radioValueTrace = [];
+    window.radioValueObserver = new MutationObserver(() => window.radioValueTrace.push(root.dataset.lvcValue || null));
+    window.radioValueObserver.observe(root, {attributes: true, attributeFilter: ["data-lvc-value", "data-lvc-has-value"]});
+    document.querySelector("#fixture-radio-option-phone").click();
+    document.querySelector("#radio-form").reset();
+    queueMicrotask(() => { window.radioValueTrace = []; });
+  });
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone,email");
+  assert.equal(await email.isChecked(), true);
+  assert.equal((await page.evaluate(() => {
+    window.radioValueObserver.disconnect();
+    return window.radioValueTrace;
+  })).includes("phone"), false);
+
+  await reset();
+  await phone.click();
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone");
+  await phone.focus();
+  const handle = await phone.elementHandle();
+  const patchRevision = await revision();
+  await page.locator("#radio-patch").evaluate(element => element.click());
+  await waitRevision(patchRevision);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [handle, await phone.elementHandle()]), true);
+  await focusId(page, "fixture-radio-option-phone");
+
+  const reorderRevision = await revision();
+  await page.locator("#radio-reorder").evaluate(element => element.click());
+  await waitRevision(reorderRevision);
+  await page.locator("label[for='fixture-radio-option-phone']").filter({hasText: "Telephone"}).waitFor();
+  assert.equal(await page.evaluate(([a, b]) => a === b, [handle, await phone.elementHandle()]), true);
+  await focusId(page, "fixture-radio-option-phone");
+  assert.equal(await phone.isChecked(), true);
+  const insertRevision = await revision();
+  await page.locator("#radio-insert").evaluate(element => element.click());
+  await waitRevision(insertRevision);
+  await page.locator("#fixture-radio-option-chat").waitFor();
+  assert.equal(await phone.isChecked(), true);
+
+  await reset();
+  const disabledEvents = await eventCount();
+  await page.locator("#fixture-radio-option-disabled").evaluate(element => element.click());
+  const disabledRevision = await revision();
+  await page.locator("#radio-patch").evaluate(element => element.click());
+  await waitRevision(disabledRevision);
+  assert.equal(await eventCount(), disabledEvents);
+  assert.equal(await email.isChecked(), true);
+
+  await reset();
+  const readOnlyRevision = await revision();
+  await page.locator("#radio-read-only").click();
+  await waitRevision(readOnlyRevision);
+  await page.locator("label[for='fixture-radio-option-phone']").click();
+  await email.focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowRight");
+  const readOnlyFlush = await revision();
+  await page.locator("#radio-patch").evaluate(element => element.click());
+  await waitRevision(readOnlyFlush);
+  assert.equal(await eventCount(), 0);
+  assert.equal(await email.isChecked(), true);
+  assert.deepEqual(await page.locator("#radio-form").evaluate(form => [...new FormData(form).entries()]), [["contact", "email"]]);
+
+  await reset();
+  const nilRevision = await revision();
+  await page.locator("#radio-server-nil").evaluate(element => element.click());
+  await waitRevision(nilRevision);
+  assert.equal(await root.locator("input:checked").count(), 0);
+  assert.equal(await email.evaluate(input => input.validity.valueMissing), true);
+
+  // Native reset returns to initial SSR email and reports one intent.
+  await phone.click();
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim().endsWith("phone"));
+  const beforeReset = await eventCount();
+  await page.locator("#radio-native-reset").click();
+  await page.waitForFunction(before => document.querySelector("#radio-events").textContent.trim().split(",").filter(Boolean).length === before + 1, beforeReset);
+  assert.equal(await email.isChecked(), true);
+  assert.deepEqual(await page.locator("#radio-form").evaluate(form => [...new FormData(form).entries()]), [["contact", "email"]]);
+
+  // Disabled controls still participate in native reset, but not FormData.
+  await reset();
+  await phone.click();
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone");
+  const disableRevision = await revision();
+  await page.locator("#radio-disable").click();
+  await waitRevision(disableRevision);
+  assert.deepEqual(await page.locator("#radio-form").evaluate(form => [...new FormData(form).entries()]), []);
+  await page.locator("#radio-native-reset").click();
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone,email");
+  assert.equal(await email.isChecked(), true);
+  assert.deepEqual(await page.locator("#radio-form").evaluate(form => [...new FormData(form).entries()]), []);
+
+  // Removing the latest selected/pending option clears it without a fallback policy.
+  await reset();
+  await mail.evaluate(element => element.click());
+  const removeRevision = await revision();
+  await page.locator("#radio-remove").evaluate(element => element.click());
+  await waitRevision(removeRevision);
+  await mail.waitFor({state: "detached"});
+  assert.equal(await root.locator("input:checked").count(), 0);
+  assert.equal(await root.getAttribute("data-lvc-has-value"), "false");
+
+  await reset();
+  await page.locator("#radio-outside").focus();
+  const outsideRevision = await revision();
+  await page.locator("#radio-server-nil").evaluate(element => element.click());
+  await waitRevision(outsideRevision);
+  await focusId(page, "radio-outside");
+}
+
 async function runTabs(page) {
   const root = page.locator("#fixture-tabs");
   const tabs = root.locator("[data-lvc-tab]");
@@ -677,6 +866,7 @@ async function run(browserType, name, iteration) {
     await runDialog(page);
     await runTooltip(page);
     await runAccordion(page);
+    await runRadioGroup(page);
     console.log(`PASS ${name} context ${iteration}`);
   } finally {
     await context.close();

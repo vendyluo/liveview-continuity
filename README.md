@@ -128,6 +128,10 @@ The first slice intentionally excludes selection, check/radio items, submenus, p
 
 LiveView owns items and authoritative `values`; the hook reflects each native button/panel immediately and preserves the latest unacknowledged desired set through stale patches. The event payload is `%{"id" => id, "open" => boolean, "values" => values}` and the handler acknowledges it by assigning `values`. Panels remain mounted, headings use native buttons, disabled triggers remain focusable and inert, and region landmarks are opt-in. See [ACCORDION.md](ACCORDION.md).
 
+## Radio Group
+
+`<.radio_group>` renders native radios and keeps browser selection optimistic through stale LiveView patches while the server remains authoritative. Native Space, validation, FormData, and reset semantics are preserved; a local Arrow handler only normalizes cross-engine wrap behavior, and `read_only` is the narrow interception required because HTML radios have no readonly attribute. See [RADIO_GROUP.md](RADIO_GROUP.md).
+
 ## Verification
 
 Install and build:
@@ -148,7 +152,7 @@ npm run test:browser
 mix live_interaction_contracts.check \
   --url http://127.0.0.1:4140 \
   --contract test/interaction_contracts/menu_patch.json
-# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, and accordion_patch.json
+# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, accordion_patch.json, and radio_group_patch.json
 ```
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.
