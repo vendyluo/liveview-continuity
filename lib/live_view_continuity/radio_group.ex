@@ -243,7 +243,9 @@ defmodule LiveViewContinuity.RadioGroup do
           reset(event) {
             const before = this.effective();
             if (this.readOnly()) {
-              event.preventDefault();
+              this.inputs().forEach(input => {
+                input.defaultChecked = before !== null && input.value === before;
+              });
               this.reflect(before);
               return;
             }

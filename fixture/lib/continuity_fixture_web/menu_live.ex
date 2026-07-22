@@ -180,6 +180,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
 
       <h2>Radio Group fixture</h2>
       <form id="radio-form">
+        <input id="radio-sibling" value="original" />
         <.radio_group
           id="fixture-radio"
           name="contact"
@@ -201,6 +202,22 @@ defmodule ContinuityFixtureWeb.MenuLive do
         </.radio_group>
         <button id="radio-native-reset" type="reset">Reset form</button>
       </form>
+      <form id="radio-external-form">
+        <input id="radio-external-sibling" value="original" />
+        <button id="radio-external-reset" type="reset">Reset external form</button>
+      </form>
+      <.radio_group
+        id="fixture-radio-external"
+        name="external_contact"
+        value="phone"
+        on_change="radio_change"
+        label="External contact method"
+        form="radio-external-form"
+        read_only
+      >
+        <:option value="email" label="Email" />
+        <:option value="phone" label="Phone" />
+      </.radio_group>
       <input id="radio-outside" />
       <button id="radio-patch" phx-click="radio_patch">Patch radio</button>
       <button id="radio-reorder" phx-click="radio_reorder">Reorder radio</button>

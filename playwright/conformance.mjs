@@ -152,19 +152,38 @@ async function runRadioGroup(page) {
   assert.equal(await email.isChecked(), true);
 
   await reset();
+  await phone.click();
+  await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone");
   const readOnlyRevision = await revision();
   await page.locator("#radio-read-only").click();
   await waitRevision(readOnlyRevision);
   await page.locator("label[for='fixture-radio-option-phone']").click();
-  await email.focus();
+  await phone.focus();
   await page.keyboard.press("Space");
   await page.keyboard.press("ArrowRight");
+  await page.locator("#radio-sibling").fill("edited");
+  const readOnlyEvents = await eventCount();
+  await page.locator("#radio-native-reset").click();
+  assert.equal(await page.locator("#radio-sibling").inputValue(), "original");
+  assert.equal(await phone.isChecked(), true);
+  assert.equal(await eventCount(), readOnlyEvents);
   const readOnlyFlush = await revision();
   await page.locator("#radio-patch").evaluate(element => element.click());
   await waitRevision(readOnlyFlush);
-  assert.equal(await eventCount(), 0);
-  assert.equal(await email.isChecked(), true);
-  assert.deepEqual(await page.locator("#radio-form").evaluate(form => [...new FormData(form).entries()]), [["contact", "email"]]);
+  await page.locator("#radio-sibling").fill("edited again");
+  await page.locator("#radio-native-reset").click();
+  assert.equal(await page.locator("#radio-sibling").inputValue(), "original");
+  assert.equal(await eventCount(), readOnlyEvents);
+  assert.equal(await phone.isChecked(), true);
+  assert.deepEqual(await page.locator("#radio-form").evaluate(form => [...new FormData(form).entries()]), [["contact", "phone"]]);
+
+  const external = page.locator("#fixture-radio-external");
+  const externalPhone = page.locator("#fixture-radio-external-option-phone");
+  await page.locator("#radio-external-sibling").fill("edited");
+  await page.locator("#radio-external-reset").click();
+  assert.equal(await page.locator("#radio-external-sibling").inputValue(), "original");
+  assert.equal(await externalPhone.isChecked(), true);
+  assert.equal(await external.getAttribute("data-lvc-value"), "phone");
 
   await reset();
   const nilRevision = await revision();
