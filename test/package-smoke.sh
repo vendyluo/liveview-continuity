@@ -14,6 +14,7 @@ test -f "$TMP/package/lib/live_view_continuity/dialog.ex"
 test -f "$TMP/package/lib/live_view_continuity/tooltip.ex"
 test -f "$TMP/package/lib/live_view_continuity/accordion.ex"
 test -f "$TMP/package/lib/live_view_continuity/disclosure.ex"
+test -f "$TMP/package/lib/live_view_continuity/popover.ex"
 test -f "$TMP/package/lib/live_view_continuity/radio_group.ex"
 test ! -e "$TMP/package/fixture"
 test ! -e "$TMP/package/playwright"
@@ -43,6 +44,7 @@ if (!hooks["LiveViewContinuity.Dialog.Dialog"]) throw new Error("Dialog colocate
 if (!hooks["LiveViewContinuity.Tooltip.Tooltip"]) throw new Error("Tooltip colocated hook missing");
 if (!hooks["LiveViewContinuity.Accordion.Accordion"]) throw new Error("Accordion colocated hook missing");
 if (!hooks["LiveViewContinuity.Disclosure.Disclosure"]) throw new Error("Disclosure colocated hook missing");
+if (!hooks["LiveViewContinuity.Popover.Popover"]) throw new Error("Popover colocated hook missing");
 if (!hooks["LiveViewContinuity.RadioGroup.RadioGroup"]) throw new Error("RadioGroup colocated hook missing");
 console.log("package hook ok");
 EOF

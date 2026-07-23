@@ -11,7 +11,7 @@ This independent community project explores a narrow ownership model: LiveView k
 Add LiveView Continuity to your dependencies:
 
 ```elixir
-{:liveview_continuity, "~> 0.5.0"}
+{:liveview_continuity, "~> 0.6.0"}
 ```
 
 The package requires Elixir 1.18 or newer, Phoenix 1.8 or newer, and Phoenix LiveView 1.1 or newer. Phoenix 1.8 is required by colocated hooks. Add the LiveView compiler to the consuming project:
@@ -164,6 +164,20 @@ Disclosure is a standalone browser-owned boolean: `default_expanded` seeds only 
 
 `<.radio_group>` renders native radios and keeps browser selection optimistic through stale LiveView patches while the server remains authoritative. Native Space, validation, FormData, and reset semantics are preserved; a local Arrow handler only normalizes cross-engine wrap behavior, and `read_only` is the narrow interception required because HTML radios have no readonly attribute. See [RADIO_GROUP.md](RADIO_GROUP.md).
 
+## Popover
+
+```heex
+<.popover id="date-picker" class="picker" trigger_class="picker-trigger" popup_class="picker-panel">
+  <:trigger>Choose a date</:trigger>
+  <.calendar value={@date} />
+  <button phx-click="clear_date" data-lvc-popover-close>Clear</button>
+</.popover>
+```
+
+Popover is an always-mounted native `popover="auto"` surface. LiveView owns and patches its interactive body; the browser owns transient open state and native dismissal behavior. Retained patches preserve trigger/popup identity, open state, and a retained focused descendant. A popup-body `data-lvc-popover-close` descendant closes immediately without suppressing its own `phx-click`; the hook repairs focus only when Escape or an explicit close strands it in the closed popup. Root `data-lvc-open` and literal trigger `aria-expanded` reflect effective state. Consumers remain responsible for the body's semantic role, accessible name, and keyboard model. See [POPOVER.md](POPOVER.md).
+
+Popover depends on the native HTML Popover API and ships no fallback or polyfill. It intentionally has no positioning engine, controlled or modal mode, hover behavior, callbacks, portals, animation, arbitrary trigger attributes, or shared overlay abstraction.
+
 ## Verification
 
 Install and build:
@@ -184,7 +198,7 @@ npm run test:browser
 mix live_interaction_contracts.check \
   --url http://127.0.0.1:4140 \
   --contract test/interaction_contracts/menu_patch.json
-# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, accordion_patch.json, disclosure_patch.json, and radio_group_patch.json
+# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, accordion_patch.json, disclosure_patch.json, popover_patch.json, and radio_group_patch.json
 ```
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.

@@ -98,6 +98,7 @@ jobs:
             tooltip_patch.json \
             accordion_patch.json \
             disclosure_patch.json \
+            popover_patch.json \
             radio_group_patch.json
           do
             mix live_interaction_contracts.check \

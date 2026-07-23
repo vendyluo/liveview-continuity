@@ -518,6 +518,118 @@ async function runDisclosure(page) {
   assert.equal(await panel.getAttribute("hidden"), "");
 }
 
+async function runPopover(page) {
+  const root = page.locator("#fixture-popover");
+  const trigger = page.locator("#fixture-popover-trigger");
+  const popup = page.locator("#fixture-popover-popup");
+  const revision = async () => Number(await root.getAttribute("data-revision"));
+  const waitOpen = open => page.waitForFunction(value =>
+    document.querySelector("#fixture-popover")?.dataset.lvcOpen === String(value), open);
+  const patch = async () => {
+    const before = await revision();
+    await page.locator("#popover-patch").evaluate(element => element.click());
+    await page.waitForFunction(value => Number(document.querySelector("#fixture-popover").dataset.revision) > value, before);
+  };
+
+  assert.equal(await trigger.getAttribute("popovertarget"), "fixture-popover-popup");
+  assert.equal(await trigger.getAttribute("aria-controls"), "fixture-popover-popup");
+  assert.equal(await popup.getAttribute("popover"), "auto");
+  assert.equal(await popup.getAttribute("aria-labelledby"), "fixture-popover-trigger");
+  for (const mode of ["click", "Enter", "Space"]) {
+    if (mode === "click") await trigger.click();
+    else { await trigger.focus(); await page.keyboard.press(mode); }
+    await waitOpen(true);
+    assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+    await page.keyboard.press("Escape");
+    await waitOpen(false);
+    await focusId(page, "fixture-popover-trigger");
+  }
+
+  await trigger.click();
+  await waitOpen(true);
+  await page.locator("#popover-input").focus();
+  await page.evaluate(() => {
+    window.__popoverEscapeReachedWindow = false;
+    window.__popoverEscapeWindowListener = event => {
+      if (event.key === "Escape") window.__popoverEscapeReachedWindow = true;
+    };
+    window.addEventListener("keydown", window.__popoverEscapeWindowListener);
+  });
+  await page.keyboard.press("Escape");
+  await waitOpen(false);
+  await focusId(page, "fixture-popover-trigger");
+  assert.equal(await page.evaluate(() => window.__popoverEscapeReachedWindow), false);
+  await page.evaluate(() => {
+    window.removeEventListener("keydown", window.__popoverEscapeWindowListener);
+    delete window.__popoverEscapeWindowListener;
+  });
+
+  await trigger.click();
+  await waitOpen(true);
+  await page.locator("#popover-input").focus();
+  await page.locator("#popover-input").evaluate(element => {
+    element.addEventListener("keydown", event => {
+      if (event.key === "Escape") event.preventDefault();
+    }, {once: true});
+  });
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => resolve())));
+  await waitOpen(true);
+  await page.locator("#popover-outside").click();
+  await waitOpen(false);
+  await focusId(page, "popover-outside");
+
+  await trigger.click();
+  await waitOpen(true);
+  await page.locator("#popover-outside").click();
+  await waitOpen(false);
+  await focusId(page, "popover-outside");
+
+  await trigger.click();
+  await waitOpen(true);
+  await page.locator("#popover-outside").focus();
+  await page.evaluate(() => {
+    window.__popoverOutsideEscapeReachedWindow = false;
+    window.__popoverOutsideEscapeWindowListener = event => {
+      if (event.key === "Escape") window.__popoverOutsideEscapeReachedWindow = true;
+    };
+    window.addEventListener("keydown", window.__popoverOutsideEscapeWindowListener);
+  });
+  await page.keyboard.press("Escape");
+  await waitOpen(false);
+  await focusId(page, "popover-outside");
+  assert.equal(await page.evaluate(() => window.__popoverOutsideEscapeReachedWindow), false);
+  await page.evaluate(() => {
+    window.removeEventListener("keydown", window.__popoverOutsideEscapeWindowListener);
+    delete window.__popoverOutsideEscapeWindowListener;
+  });
+
+  await trigger.click();
+  await waitOpen(true);
+  const triggerHandle = await trigger.elementHandle();
+  const popupHandle = await popup.elementHandle();
+  const input = page.locator("#popover-input");
+  const inputHandle = await input.elementHandle();
+  await input.focus();
+  await patch();
+  assert.equal(await page.evaluate(([a, b]) => a === b, [triggerHandle, await trigger.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [popupHandle, await popup.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [inputHandle, await input.elementHandle()]), true);
+  await focusId(page, "popover-input");
+  await waitOpen(true);
+  assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+  assert.match(await page.locator("#popover-content").textContent(), /revision 1/);
+
+  await page.locator("#popover-close-action").click();
+  await waitOpen(false);
+  await page.waitForFunction(() => document.querySelector("#popover-actions").textContent.trim() === "1");
+  await focusId(page, "fixture-popover-trigger");
+
+  await patch();
+  assert.equal(await root.getAttribute("data-lvc-open"), "false");
+  assert.equal(await trigger.getAttribute("aria-expanded"), "false");
+}
+
 async function runDialog(page) {
   const root = page.locator("#fixture-dialog");
   const trigger = page.locator("#fixture-dialog-trigger");
@@ -1103,6 +1215,7 @@ async function run(browserType, name, iteration) {
 
     await runTabs(page);
     await runDisclosure(page);
+    await runPopover(page);
     await runDialog(page);
     await runControlledDialog(page);
     await runActionTooltip(page);

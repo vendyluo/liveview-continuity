@@ -6,6 +6,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
   import LiveViewContinuity.Tooltip
   import LiveViewContinuity.Accordion
   import LiveViewContinuity.Disclosure
+  import LiveViewContinuity.Popover
   import LiveViewContinuity.RadioGroup
 
   @base_items [
@@ -60,6 +61,8 @@ defmodule ContinuityFixtureWeb.MenuLive do
        controlled_dialog_revision: 0,
        controlled_dialog_closes: [],
        disclosure_revision: 0,
+       popover_revision: 0,
+       popover_actions: 0,
        tooltip_revision: 0,
        tooltip_delay: 120,
        tooltip_disabled: false,
@@ -166,6 +169,20 @@ defmodule ContinuityFixtureWeb.MenuLive do
       </.disclosure>
       <input id="disclosure-outside" aria-label="Outside disclosure" />
       <button id="disclosure-patch" phx-click="disclosure_patch">Patch disclosure</button>
+
+      <h2>Popover fixture</h2>
+      <.popover id="fixture-popover" data-revision={@popover_revision}>
+        <:trigger>Choose a date</:trigger>
+        <p id="popover-content">Popover content revision {@popover_revision}</p>
+        <input id="popover-input" aria-label="Popover retained input" />
+        <button id="popover-inner-patch" phx-click="popover_patch">Patch in place</button>
+        <button id="popover-close-action" phx-click="popover_action" data-lvc-popover-close>
+          Done
+        </button>
+      </.popover>
+      <input id="popover-outside" aria-label="Outside popover" />
+      <button id="popover-patch" phx-click="popover_patch">Patch popover</button>
+      <output id="popover-actions">{@popover_actions}</output>
 
       <h2>Accordion fixture</h2>
       <.accordion
@@ -504,6 +521,16 @@ defmodule ContinuityFixtureWeb.MenuLive do
 
   def handle_event("disclosure_patch", _, socket),
     do: {:noreply, update(socket, :disclosure_revision, &(&1 + 1))}
+
+  def handle_event("popover_patch", _, socket),
+    do: {:noreply, update(socket, :popover_revision, &(&1 + 1))}
+
+  def handle_event("popover_action", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(:popover_actions, &(&1 + 1))
+       |> update(:popover_revision, &(&1 + 1))}
 
   def handle_event("accordion_reorder", _, socket),
     do:

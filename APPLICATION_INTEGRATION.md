@@ -15,6 +15,14 @@ CSS Anchor Positioning can be a useful progressive enhancement, but an applicati
 
 The adapter must not take ownership of `data-lvc-open`, Popover state, Tooltip timers, or `aria-describedby`. Those remain part of the component contract. Portals, arrows, safe polygons, collision middleware, and a general overlay manager remain outside the package scope.
 
+## Popover positioning
+
+Popover also leaves geometry to the application. CSS Anchor Positioning can be concise, but feature detection alone is not sufficient evidence: a browser may parse the properties while still producing incorrect geometry for a popover nested in another top-layer or modal surface. Verify the actual supported browser matrix and nesting used by the product.
+
+An application-local geometry adapter is the conservative alternative. It should listen to the native popup `toggle` event, measure only while open, choose a side with enough space, clamp the popup to the viewport, and recompute after relevant scroll, resize, or retained LiveView patches. Constrain oversized interactive bodies with a viewport-relative maximum height and scrolling rather than allowing them to overlap their trigger or leave the viewport.
+
+The adapter owns only inline geometry. It must not call `showPopover()` or `hidePopover()`, write `data-lvc-open` or `aria-expanded`, restore focus, or suppress dismissal. Those remain Popover responsibilities. Keep product-specific geometry local until multiple consumers demonstrate the same placement contract.
+
 ## Dialog first paint
 
 Dialog opens synchronously in the browser and then sends `on_open` for server acknowledgment. Content fetched or constructed only by that event cannot be present for the first modal paint.

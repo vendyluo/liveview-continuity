@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0 — 2026-07-23
+
+- Add a native auto Popover whose browser-owned open state, ARIA reflection, focus behavior, and interactive patchable body survive retained LiveView patches.
+- Keep one Escape press scoped to the open Popover so it does not also dismiss a containing window-level surface.
+
 ## 0.5.0 — 2026-07-23
 
 - Add a standalone, browser-owned Disclosure that preserves expanded state and synchronized ARIA/visibility attributes across retained LiveView patches.
