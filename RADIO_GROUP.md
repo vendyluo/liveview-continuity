@@ -4,7 +4,7 @@
 
 ## API and ownership
 
-`id`, `name`, authoritative `value` (`nil` or an option value), `on_change`, `label`, and at least one `option` are required. Options require stable `value` and visible `label`; they accept `disabled`, `class`, `input_class`, and `label_class`. The root accepts `required`, `disabled`, `read_only`, `invalid`, external `form`, global/root attributes, and legend/description/error classes. At most one `description` and one `error` slot may be supplied.
+`id`, `name`, authoritative `value` (`nil` or an option value), `on_change`, `label`, and at least one `option` are required. Options require a stable `value` and either a non-blank `label` attribute or visible inner content; inner content supports structured labels such as text with a count badge while remaining inside the native `<label>`. When both are supplied, the `label` attribute takes precedence. Options also accept `disabled`, `class`, `input_class`, and `label_class`. The root accepts `required`, `disabled`, `read_only`, `invalid`, external `form`, global/root attributes, and legend/description/error classes. At most one `description` and one `error` slot may be supplied.
 
 The server owns options, content, flags, and desired value. A native `change` optimistically reflects selection and sends exactly `%{value: selected_string}`. The handler must validate and acknowledge the latest payload by assigning that value. Pending selection survives older patches; acknowledgment clears it, and removal of the pending option falls back to current server intent. Server rejection and timeout policy are deferred.
 

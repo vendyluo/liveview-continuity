@@ -247,9 +247,11 @@ defmodule ContinuityFixtureWeb.MenuLive do
           <:option
             :for={option <- @radio_options}
             value={option.value}
-            label={option.label}
             disabled={Map.get(option, :disabled, false)}
-          />
+          >
+            <span>{option.label}</span>
+            <span :if={option.value == "phone"} data-rich-label-count>2</span>
+          </:option>
         </.radio_group>
         <button id="radio-native-reset" type="reset">Reset form</button>
       </form>

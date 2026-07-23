@@ -164,6 +164,17 @@ Disclosure is a standalone browser-owned boolean: `default_expanded` seeds only 
 
 `<.radio_group>` renders native radios and keeps browser selection optimistic through stale LiveView patches while the server remains authoritative. Native Space, validation, FormData, and reset semantics are preserved; a local Arrow handler only normalizes cross-engine wrap behavior, and `read_only` is the narrow interception required because HTML radios have no readonly attribute. See [RADIO_GROUP.md](RADIO_GROUP.md).
 
+Options accept either the concise `label` attribute or structured inner label content:
+
+```heex
+<.radio_group id="status" name="status" value={@status} on_change="filter" label="Status">
+  <:option value="all" label="All" />
+  <:option value="draft">
+    <span>Draft</span><span class="count">{@draft_count}</span>
+  </:option>
+</.radio_group>
+```
+
 ## Popover
 
 ```heex

@@ -47,6 +47,19 @@ defmodule LiveViewContinuity.RadioGroupTest do
     refute html =~ ~s(role="radio")
   end
 
+  test "renders rich option label content without changing native label association" do
+    html =
+      render_group("email", [], [
+        rich_option("email", "<span>Email</span><span class=\"count\">3</span>"),
+        option("phone", "Phone")
+      ])
+
+    assert html =~
+             ~s(for="contact-option-email" class=""><span>Email</span><span class="count">3</span></label>)
+
+    assert html =~ ~s(id="contact-option-email" type="radio" name="contact_method" value="email")
+  end
+
   test "renders nil and selected state, disabled/read-only and consumer attributes" do
     nil_html = render_group(nil)
     refute nil_html =~ ~s( checked)
@@ -90,6 +103,7 @@ defmodule LiveViewContinuity.RadioGroupTest do
           {[], [option("bad id", "Bad")], "option value"},
           {[], [option("x", "X"), option("x", "Again")], "unique"},
           {[], [option("x", " ")], "option label"},
+          {[], [%{value: "x"}], "label or inner content"},
           {[value: "missing"], [option("x", "X")], "existing option"},
           {[description: [slot("a"), slot("b")]], nil, "at most one description"},
           {[error: [slot("a"), slot("b")]], nil, "at most one error"}
@@ -100,6 +114,9 @@ defmodule LiveViewContinuity.RadioGroupTest do
 
   defp option(value, label, attrs \\ []),
     do: Map.merge(%{value: value, label: label}, Map.new(attrs))
+
+  defp rich_option(value, html, attrs \\ []),
+    do: Map.merge(%{value: value, inner_block: fn _, _ -> {:safe, html} end}, Map.new(attrs))
 
   defp slot(text), do: %{inner_block: fn _, _ -> text end}
   defp input_tag(html, id), do: opening_tag(html, "input", id)

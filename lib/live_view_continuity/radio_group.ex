@@ -26,7 +26,7 @@ defmodule LiveViewContinuity.RadioGroup do
 
   slot :option, required: true do
     attr(:value, :string, required: true)
-    attr(:label, :string, required: true)
+    attr(:label, :string)
     attr(:disabled, :boolean)
     attr(:class, :any)
     attr(:input_class, :any)
@@ -100,7 +100,9 @@ defmodule LiveViewContinuity.RadioGroup do
           data-lvc-checked={to_string(option.value == @value)}
           phx-mounted={JS.ignore_attributes(["checked", "data-lvc-checked"])}
         />
-        <label for={option_id(@id, option.value)} class={option[:label_class]}>{option.label}</label>
+        <label for={option_id(@id, option.value)} class={option[:label_class]}>{if option[:label],
+          do: option.label,
+          else: render_slot(option)}</label>
       </div>
       <div
         :if={@error != []}
@@ -273,7 +275,7 @@ defmodule LiveViewContinuity.RadioGroup do
 
     values = Enum.map(assigns.option, & &1.value)
     Enum.each(values, &validate_dom_value!(&1, "radio option value"))
-    Enum.each(assigns.option, &validate_label!(&1.label, "radio option label"))
+    Enum.each(assigns.option, &validate_option_label!/1)
 
     if length(values) != length(Enum.uniq(values)),
       do: raise(ArgumentError, "radio option values must be unique")
@@ -304,6 +306,14 @@ defmodule LiveViewContinuity.RadioGroup do
   end
 
   defp validate_label!(_, name), do: raise(ArgumentError, "#{name} must be a non-blank string")
+
+  defp validate_option_label!(%{label: label}) when not is_nil(label),
+    do: validate_label!(label, "radio option label")
+
+  defp validate_option_label!(%{inner_block: inner_block}) when is_function(inner_block), do: :ok
+
+  defp validate_option_label!(_),
+    do: raise(ArgumentError, "radio option requires a non-blank label or inner content")
 
   defp describedby(assigns),
     do:

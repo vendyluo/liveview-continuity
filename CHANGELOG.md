@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0 — 2026-07-23
+
+- Let Radio Group options render structured native-label content, such as text with a dynamic count badge, while preserving the existing concise `label` attribute API.
+
 ## 0.6.0 — 2026-07-23
 
 - Add a native auto Popover whose browser-owned open state, ARIA reflection, focus behavior, and interactive patchable body survive retained LiveView patches.

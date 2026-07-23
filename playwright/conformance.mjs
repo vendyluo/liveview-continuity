@@ -48,7 +48,8 @@ async function runRadioGroup(page) {
   assert.equal(await email.isChecked(), true);
   assert.equal(await root.locator("input:checked").count(), 1);
 
-  await page.locator("label[for='fixture-radio-option-phone']").click();
+  assert.equal(await page.locator("label[for='fixture-radio-option-phone'] [data-rich-label-count]").textContent(), "2");
+  await page.locator("label[for='fixture-radio-option-phone'] [data-rich-label-count]").click();
   assert.deepEqual(await page.locator("#radio-form").evaluate(form => [...new FormData(form).entries()]), [["contact", "phone"]]);
   await page.waitForFunction(() => document.querySelector("#radio-events").textContent.trim() === "phone");
   assert.equal(await eventCount(), 1);
