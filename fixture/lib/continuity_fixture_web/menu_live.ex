@@ -8,6 +8,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
   import LiveViewContinuity.Disclosure
   import LiveViewContinuity.Popover
   import LiveViewContinuity.RadioGroup
+  import LiveViewContinuity.Switch
 
   @base_items [
     %{id: "alpha", label: "Álpha"},
@@ -91,7 +92,13 @@ defmodule ContinuityFixtureWeb.MenuLive do
        radio_read_only: false,
        radio_disabled: false,
        radio_revision: 0,
-       radio_events: []
+       radio_events: [],
+       switch_checked: true,
+       switch_read_only: false,
+       switch_disabled: false,
+       switch_external_checked: true,
+       switch_revision: 0,
+       switch_events: []
      )}
   end
 
@@ -285,6 +292,46 @@ defmodule ContinuityFixtureWeb.MenuLive do
         ",",
         &if(&1 == nil, do: "nil", else: &1)
       )}</output>
+
+      <h2>Switch fixture</h2>
+      <form id="switch-form">
+        <input id="switch-sibling" value="original" />
+        <.switch
+          id="fixture-switch"
+          name="notifications"
+          value="enabled"
+          checked={@switch_checked}
+          on_change="switch_change"
+          read_only={@switch_read_only}
+          disabled={@switch_disabled}
+          data-revision={@switch_revision}
+        >
+          <span>Notifications</span>
+          <span data-switch-label-state>{if @switch_checked, do: "On", else: "Off"}</span>
+          <:description>Receive notifications.</:description>
+        </.switch>
+        <button id="switch-native-reset" type="reset">Reset switch form</button>
+      </form>
+      <form id="switch-external-form">
+        <input id="switch-external-sibling" value="original" />
+        <button id="switch-external-reset" type="reset">Reset external switch form</button>
+      </form>
+      <.switch
+        id="fixture-switch-external"
+        name="external_notifications"
+        checked={@switch_external_checked}
+        on_change="switch_change"
+        form="switch-external-form"
+        label="External notifications"
+        read_only
+      />
+      <button id="switch-patch" phx-click="switch_patch">Patch switch</button>
+      <button id="switch-server-false" phx-click="switch_server_false">Server false</button>
+      <button id="switch-read-only" phx-click="switch_read_only">Read only switch</button>
+      <button id="switch-disable" phx-click="switch_disable">Disable switch</button>
+      <button id="switch-external-false" phx-click="switch_external_false">External false</button>
+      <button id="switch-reset" phx-click="switch_reset">Reset switch fixture</button>
+      <output id="switch-events">{Enum.map_join(@switch_events, ",", &to_string/1)}</output>
 
       <h2>Dialog fixture</h2>
       <.dialog
@@ -678,6 +725,45 @@ defmodule ContinuityFixtureWeb.MenuLive do
        radio_disabled: false,
        radio_events: [],
        radio_revision: socket.assigns.radio_revision + 1
+     )}
+  end
+
+  def handle_event("switch_change", %{"checked" => checked}, socket)
+      when is_boolean(checked) do
+    {:noreply,
+     assign(socket,
+       switch_checked: checked,
+       switch_events: socket.assigns.switch_events ++ [checked]
+     )}
+  end
+
+  def handle_event("switch_patch", _, socket),
+    do: {:noreply, update(socket, :switch_revision, &(&1 + 1))}
+
+  def handle_event("switch_server_false", _, socket),
+    do:
+      {:noreply, socket |> assign(:switch_checked, false) |> update(:switch_revision, &(&1 + 1))}
+
+  def handle_event("switch_read_only", _, socket),
+    do:
+      {:noreply, socket |> assign(:switch_read_only, true) |> update(:switch_revision, &(&1 + 1))}
+
+  def handle_event("switch_disable", _, socket),
+    do:
+      {:noreply, socket |> assign(:switch_disabled, true) |> update(:switch_revision, &(&1 + 1))}
+
+  def handle_event("switch_external_false", _, socket),
+    do: {:noreply, assign(socket, :switch_external_checked, false)}
+
+  def handle_event("switch_reset", _, socket) do
+    {:noreply,
+     assign(socket,
+       switch_checked: true,
+       switch_read_only: false,
+       switch_disabled: false,
+       switch_external_checked: true,
+       switch_events: [],
+       switch_revision: socket.assigns.switch_revision + 1
      )}
   end
 

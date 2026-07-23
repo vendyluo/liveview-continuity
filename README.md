@@ -11,7 +11,7 @@ This independent community project explores a narrow ownership model: LiveView k
 Add LiveView Continuity to your dependencies:
 
 ```elixir
-{:liveview_continuity, "~> 0.6.0"}
+{:liveview_continuity, "~> 0.8.0"}
 ```
 
 The package requires Elixir 1.18 or newer, Phoenix 1.8 or newer, and Phoenix LiveView 1.1 or newer. Phoenix 1.8 is required by colocated hooks. Add the LiveView compiler to the consuming project:
@@ -175,6 +175,32 @@ Options accept either the concise `label` attribute or structured inner label co
 </.radio_group>
 ```
 
+## Switch
+
+`<.switch>` renders a native checkbox with switch semantics, keeps browser interaction optimistic through stale LiveView patches, and sends exact desired state rather than an ambiguous toggle command. Its string label form is concise, while inner content supports structured labels. See [SWITCH.md](SWITCH.md).
+
+```heex
+<.switch
+  id="ticket-sale"
+  name="ticket_sale"
+  value="enabled"
+  checked={@sale_active}
+  on_change="set_ticket_sale"
+>
+  <span>Ticket sales</span>
+  <span class="state">{if @sale_active, do: "Open", else: "Paused"}</span>
+  <:description>Controls whether attendees can purchase tickets.</:description>
+</.switch>
+```
+
+The containing LiveView acknowledges the exact boolean:
+
+```elixir
+def handle_event("set_ticket_sale", %{"checked" => checked}, socket) when is_boolean(checked) do
+  {:noreply, assign(socket, :sale_active, checked)}
+end
+```
+
 ## Popover
 
 ```heex
@@ -209,7 +235,7 @@ npm run test:browser
 mix live_interaction_contracts.check \
   --url http://127.0.0.1:4140 \
   --contract test/interaction_contracts/menu_patch.json
-# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, accordion_patch.json, disclosure_patch.json, popover_patch.json, and radio_group_patch.json
+# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, accordion_patch.json, disclosure_patch.json, popover_patch.json, radio_group_patch.json, and switch_patch.json
 ```
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.

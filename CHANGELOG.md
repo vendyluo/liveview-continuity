@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0 — 2026-07-23
+
+- Add a native, server-authoritative Switch with optimistic checked state and exact boolean intent across rapid interaction and stale LiveView patches.
+- Support structured native-label content, FormData, native and external-form reset, read-only and disabled states, and retained focus and identity.
+
 ## 0.7.0 — 2026-07-23
 
 - Let Radio Group options render structured native-label content, such as text with a dynamic count badge, while preserving the existing concise `label` attribute API.

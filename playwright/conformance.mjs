@@ -24,6 +24,133 @@ async function open(page, key = "ArrowDown") {
   await page.locator("#fixture-menu-popup").waitFor({state: "visible"});
 }
 
+async function runSwitch(page) {
+  const root = page.locator("#fixture-switch");
+  const input = page.locator("#fixture-switch-input");
+  const labelState = page.locator("#fixture-switch-label [data-switch-label-state]");
+  const events = async () => {
+    const value = (await page.locator("#switch-events").textContent()).trim();
+    return value ? value.split(",") : [];
+  };
+  const revision = async () => Number(await root.getAttribute("data-revision"));
+  const waitRevision = async before => page.waitForFunction(
+    value => Number(document.querySelector("#fixture-switch").dataset.revision) > value,
+    before,
+  );
+  const reset = async () => {
+    const before = await revision();
+    await page.locator("#switch-reset").click();
+    await waitRevision(before);
+    assert.deepEqual(await events(), []);
+    assert.equal(await input.isChecked(), true);
+  };
+
+  assert.equal(await input.getAttribute("type"), "checkbox");
+  assert.equal(await input.getAttribute("role"), "switch");
+  assert.equal(await input.getAttribute("name"), "notifications");
+  assert.equal(await root.getAttribute("data-lvc-desired-checked"), "true");
+  assert.equal(await input.isChecked(), true);
+  assert.deepEqual(await page.locator("#switch-form").evaluate(form => [...new FormData(form).entries()]), [["notifications", "enabled"]]);
+
+  await labelState.click();
+  await page.waitForFunction(() => document.querySelector("#switch-events").textContent.trim() === "false");
+  assert.equal(await input.isChecked(), false);
+  assert.equal(await root.getAttribute("data-lvc-checked"), "false");
+  assert.deepEqual(await page.locator("#switch-form").evaluate(form => [...new FormData(form).entries()]), []);
+
+  await reset();
+  await input.focus();
+  await page.keyboard.press("Space");
+  await page.waitForFunction(() => document.querySelector("#switch-events").textContent.trim() === "false");
+  assert.equal(await input.isChecked(), false);
+
+  await reset();
+  const handle = await input.elementHandle();
+  await input.focus();
+  const patchRevision = await revision();
+  await page.locator("#switch-patch").evaluate(element => element.click());
+  await waitRevision(patchRevision);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [handle, await input.elementHandle()]), true);
+  await focusId(page, "fixture-switch-input");
+
+  await reset();
+  const abaRevision = await revision();
+  await page.evaluate(() => {
+    const root = document.querySelector("#fixture-switch");
+    const input = document.querySelector("#fixture-switch-input");
+    window.switchCheckedTrace = [];
+    window.switchCheckedObserver = new MutationObserver(() => window.switchCheckedTrace.push(root.dataset.lvcChecked));
+    window.switchCheckedObserver.observe(root, {attributes: true, attributeFilter: ["data-lvc-checked"]});
+    document.querySelector("#switch-patch").click();
+    input.click();
+    input.click();
+    queueMicrotask(() => { window.switchCheckedTrace = []; });
+  });
+  await waitRevision(abaRevision);
+  await page.waitForFunction(() => document.querySelector("#switch-events").textContent.trim() === "false,true");
+  await page.waitForFunction(() => document.querySelector("#fixture-switch").dataset.lvcDesiredChecked === "true");
+  assert.equal(await input.isChecked(), true);
+  assert.equal((await page.evaluate(() => {
+    window.switchCheckedObserver.disconnect();
+    return window.switchCheckedTrace;
+  })).includes("false"), false);
+
+  await reset();
+  await input.click();
+  await page.waitForFunction(() => document.querySelector("#switch-events").textContent.trim() === "false");
+  await page.locator("#switch-sibling").fill("edited");
+  await page.locator("#switch-form").evaluate(form => form.addEventListener("reset", event => event.preventDefault(), {once: true}));
+  await page.locator("#switch-native-reset").click();
+  await page.waitForTimeout(20);
+  assert.equal(await page.locator("#switch-sibling").inputValue(), "edited");
+  assert.equal(await input.isChecked(), false);
+  assert.deepEqual(await events(), ["false"]);
+  await page.locator("#switch-native-reset").click();
+  await page.waitForFunction(() => document.querySelector("#switch-events").textContent.trim() === "false,true");
+  assert.equal(await page.locator("#switch-sibling").inputValue(), "original");
+  assert.equal(await input.isChecked(), true);
+
+  await reset();
+  await input.click();
+  await page.waitForFunction(() => document.querySelector("#switch-events").textContent.trim() === "false");
+  const readOnlyRevision = await revision();
+  await page.locator("#switch-read-only").click();
+  await waitRevision(readOnlyRevision);
+  const readOnlyEvents = await events();
+  await labelState.click();
+  await input.focus();
+  await page.keyboard.press("Space");
+  await page.locator("#switch-sibling").fill("edited");
+  await page.locator("#switch-native-reset").click();
+  await page.waitForTimeout(20);
+  assert.equal(await page.locator("#switch-sibling").inputValue(), "original");
+  assert.equal(await input.isChecked(), false);
+  assert.equal(await input.evaluate(element => element.defaultChecked), true);
+  assert.deepEqual(await events(), readOnlyEvents);
+
+  await page.locator("#switch-external-false").click();
+  await page.waitForFunction(() => document.querySelector("#fixture-switch-external").dataset.lvcDesiredChecked === "false");
+  await page.locator("#switch-external-form").evaluate(form => form.replaceWith(form.cloneNode(true)));
+  await page.locator("#switch-external-sibling").fill("edited");
+  await page.locator("#switch-external-reset").click();
+  assert.equal(await page.locator("#switch-external-sibling").inputValue(), "original");
+  assert.equal(await page.locator("#fixture-switch-external-input").isChecked(), false);
+
+  await reset();
+  const serverRevision = await revision();
+  await page.locator("#switch-server-false").click();
+  await waitRevision(serverRevision);
+  assert.equal(await input.isChecked(), false);
+  assert.deepEqual(await events(), []);
+
+  await reset();
+  const disabledRevision = await revision();
+  await page.locator("#switch-disable").click();
+  await waitRevision(disabledRevision);
+  assert.equal(await input.isDisabled(), true);
+  assert.deepEqual(await page.locator("#switch-form").evaluate(form => [...new FormData(form).entries()]), []);
+}
+
 async function runRadioGroup(page) {
   const root = page.locator("#fixture-radio");
   const inputs = root.locator("[data-lvc-radio-input]");
@@ -1222,6 +1349,7 @@ async function run(browserType, name, iteration) {
     await runActionTooltip(page);
     await runTooltip(page);
     await runAccordion(page);
+    await runSwitch(page);
     await runRadioGroup(page);
     await runMenuNavigation(page, context);
     console.log(`PASS ${name} context ${iteration}`);

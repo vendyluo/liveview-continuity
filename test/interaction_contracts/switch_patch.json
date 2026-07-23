@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "continuity-switch-survives-acknowledged-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-switch"},
+  "activate": [{"type": "click", "selector": "#fixture-switch-label"}],
+  "patch": {
+    "trigger": {"type": "click", "selector": "#switch-patch"},
+    "ack": {"type": "attribute_change", "selector": "#fixture-switch", "attribute": "data-revision"}
+  },
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-switch-input", "after": "same"},
+    {"probe": "attribute", "selector": "#fixture-switch", "attribute": "data-lvc-checked", "before": {"value": "false"}, "after": {"value": "false"}},
+    {"probe": "attribute", "selector": "#fixture-switch-input", "attribute": "data-lvc-checked", "before": {"value": "false"}, "after": {"value": "false"}},
+    {"probe": "focus", "selector": "#fixture-switch-input", "before": {"active": true}, "after": {"active": false}}
+  ]
+}

@@ -99,7 +99,8 @@ jobs:
             accordion_patch.json \
             disclosure_patch.json \
             popover_patch.json \
-            radio_group_patch.json
+            radio_group_patch.json \
+            switch_patch.json
           do
             mix live_interaction_contracts.check \
               --url http://127.0.0.1:4140 \

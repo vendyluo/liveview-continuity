@@ -16,6 +16,7 @@ test -f "$TMP/package/lib/live_view_continuity/accordion.ex"
 test -f "$TMP/package/lib/live_view_continuity/disclosure.ex"
 test -f "$TMP/package/lib/live_view_continuity/popover.ex"
 test -f "$TMP/package/lib/live_view_continuity/radio_group.ex"
+test -f "$TMP/package/lib/live_view_continuity/switch.ex"
 test ! -e "$TMP/package/fixture"
 test ! -e "$TMP/package/playwright"
 
@@ -46,6 +47,7 @@ if (!hooks["LiveViewContinuity.Accordion.Accordion"]) throw new Error("Accordion
 if (!hooks["LiveViewContinuity.Disclosure.Disclosure"]) throw new Error("Disclosure colocated hook missing");
 if (!hooks["LiveViewContinuity.Popover.Popover"]) throw new Error("Popover colocated hook missing");
 if (!hooks["LiveViewContinuity.RadioGroup.RadioGroup"]) throw new Error("RadioGroup colocated hook missing");
+if (!hooks["LiveViewContinuity.Switch.Switch"]) throw new Error("Switch colocated hook missing");
 console.log("package hook ok");
 EOF
 
