@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "continuity-checkbox-survives-acknowledged-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-checkbox"},
+  "activate": [{"type": "click", "selector": "#fixture-checkbox-label"}],
+  "patch": {
+    "trigger": {"type": "click", "selector": "#checkbox-patch"},
+    "ack": {"type": "attribute_change", "selector": "#fixture-checkbox", "attribute": "data-revision"}
+  },
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-checkbox-input", "after": "same"},
+    {"probe": "attribute", "selector": "#fixture-checkbox", "attribute": "data-lvc-checked", "before": {"value": "false"}, "after": {"value": "false"}},
+    {"probe": "attribute", "selector": "#fixture-checkbox-input", "attribute": "data-lvc-checked", "before": {"value": "false"}, "after": {"value": "false"}},
+    {"probe": "focus", "selector": "#fixture-checkbox-input", "before": {"active": true}, "after": {"active": false}}
+  ]
+}

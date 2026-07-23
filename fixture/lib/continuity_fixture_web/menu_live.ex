@@ -333,6 +333,8 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <button id="switch-reset" phx-click="switch_reset">Reset switch fixture</button>
       <output id="switch-events">{Enum.map_join(@switch_events, ",", &to_string/1)}</output>
 
+      <.live_component module={ContinuityFixtureWeb.CheckboxComponent} id="checkbox-owner" />
+
       <h2>Dialog fixture</h2>
       <.dialog
         id="fixture-dialog"
@@ -845,4 +847,107 @@ defmodule ContinuityFixtureWeb.MenuLive do
        tab_revision: socket.assigns.tab_revision + 1
      )}
   end
+end
+
+defmodule ContinuityFixtureWeb.CheckboxComponent do
+  use Phoenix.LiveComponent
+  import LiveViewContinuity.Checkbox
+
+  def mount(socket),
+    do:
+      {:ok,
+       assign(socket,
+         checked: true,
+         read_only: false,
+         disabled: false,
+         reject_next: false,
+         revision: 0,
+         events: []
+       )}
+
+  def render(assigns) do
+    ~H"""
+    <section id="checkbox-component">
+      <h2>Checkbox fixture</h2>
+      <form id="checkbox-form">
+        <input id="checkbox-sibling" value="original" />
+        <.checkbox
+          id="fixture-checkbox"
+          name="terms"
+          value="accepted"
+          checked={@checked}
+          on_change="checkbox_change"
+          required
+          read_only={@read_only}
+          disabled={@disabled}
+          data-revision={@revision}
+        >
+          <span>Accept terms</span><span data-checkbox-label-state>{if @checked, do: "Yes", else: "No"}</span>
+          <:description>Required to continue.</:description>
+        </.checkbox>
+        <button id="checkbox-native-reset" type="reset">Reset checkbox form</button>
+      </form>
+      <form id="checkbox-external-form">
+        <input id="checkbox-external-sibling" value="original" />
+        <button id="checkbox-external-reset" type="reset">Reset external form</button>
+      </form>
+      <.checkbox
+        id="fixture-checkbox-external"
+        name="external_terms"
+        checked={false}
+        on_change="external_change"
+        form="checkbox-external-form"
+        label="External terms"
+        read_only
+      />
+      <button id="checkbox-patch" phx-click="patch" phx-target={@myself}>Patch</button>
+      <button id="checkbox-server-false" phx-click="server_false" phx-target={@myself}>Server false</button>
+      <button id="checkbox-read-only" phx-click="read_only" phx-target={@myself}>Read only</button>
+      <button id="checkbox-reject-next" phx-click="reject_next" phx-target={@myself}>Reject next change</button>
+      <button id="checkbox-disable" phx-click="disable" phx-target={@myself}>Disable</button>
+      <button id="checkbox-reset" phx-click="reset" phx-target={@myself}>Reset fixture</button>
+      <output id="checkbox-events">{Enum.map_join(@events, ",", &to_string/1)}</output>
+    </section>
+    """
+  end
+
+  def handle_event("checkbox_change", %{"checked" => checked} = payload, socket)
+      when is_boolean(checked) and map_size(payload) == 1 do
+    updates = [events: socket.assigns.events ++ [checked]]
+
+    updates =
+      if socket.assigns.reject_next,
+        do: updates ++ [read_only: true, reject_next: false],
+        else: updates ++ [checked: checked]
+
+    {:noreply, assign(socket, updates)}
+  end
+
+  def handle_event("external_change", _, _socket), do: raise("read-only checkbox changed")
+
+  def handle_event("patch", _, socket), do: {:noreply, update(socket, :revision, &(&1 + 1))}
+
+  def handle_event("server_false", _, socket),
+    do: {:noreply, socket |> assign(:checked, false) |> update(:revision, &(&1 + 1))}
+
+  def handle_event("read_only", _, socket),
+    do: {:noreply, socket |> assign(:read_only, true) |> update(:revision, &(&1 + 1))}
+
+  def handle_event("reject_next", _, socket),
+    do: {:noreply, socket |> assign(:reject_next, true) |> update(:revision, &(&1 + 1))}
+
+  def handle_event("disable", _, socket),
+    do: {:noreply, socket |> assign(:disabled, true) |> update(:revision, &(&1 + 1))}
+
+  def handle_event("reset", _, socket),
+    do:
+      {:noreply,
+       assign(socket,
+         checked: true,
+         read_only: false,
+         disabled: false,
+         reject_next: false,
+         events: [],
+         revision: socket.assigns.revision + 1
+       )}
 end

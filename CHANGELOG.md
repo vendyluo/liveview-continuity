@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0 — 2026-07-23
+
+- Add native Checkbox with server-authoritative state, optimistic exact-boolean intent, native forms and reset, synthetic read-only, and retained focus and identity through stale/ABA patches.
+- Owner-target Checkbox and Switch events with `pushEventTo`, including nested LiveComponent delivery.
+
 ## 0.8.0 — 2026-07-23
 
 - Add a native, server-authoritative Switch with optimistic checked state and exact boolean intent across rapid interaction and stale LiveView patches.

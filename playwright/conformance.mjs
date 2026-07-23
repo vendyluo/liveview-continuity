@@ -151,6 +151,70 @@ async function runSwitch(page) {
   assert.deepEqual(await page.locator("#switch-form").evaluate(form => [...new FormData(form).entries()]), []);
 }
 
+async function runCheckbox(page) {
+  const root = page.locator("#fixture-checkbox");
+  const input = page.locator("#fixture-checkbox-input");
+  const events = async () => (await page.locator("#checkbox-events").textContent()).trim();
+  const revision = async () => Number(await root.getAttribute("data-revision"));
+  const waitRevision = before => page.waitForFunction(value => Number(document.querySelector("#fixture-checkbox").dataset.revision) > value, before);
+  const reset = async () => { const before = await revision(); await page.locator("#checkbox-reset").click(); await waitRevision(before); };
+
+  assert.equal(await input.getAttribute("type"), "checkbox");
+  assert.equal(await input.getAttribute("role"), null);
+  assert.equal(await input.getAttribute("aria-readonly"), null);
+  assert.equal(await input.getAttribute("required"), "");
+  assert.equal(await input.evaluate(element => element.checkValidity()), true);
+  assert.deepEqual(await page.locator("#checkbox-form").evaluate(form => [...new FormData(form).entries()]), [["terms", "accepted"]]);
+  await page.locator("#fixture-checkbox-label [data-checkbox-label-state]").click();
+  await page.waitForFunction(() => document.querySelector("#checkbox-events").textContent.trim() === "false");
+  assert.equal(await input.isChecked(), false);
+  assert.equal(await input.evaluate(element => element.checkValidity()), false);
+  assert.deepEqual(await page.locator("#checkbox-form").evaluate(form => [...new FormData(form).entries()]), []);
+
+  await reset();
+  await input.focus(); const handle = await input.elementHandle(); const before = await revision();
+  await page.locator("#checkbox-patch").evaluate(element => element.click()); await waitRevision(before);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [handle, await input.elementHandle()]), true);
+  await focusId(page, "fixture-checkbox-input");
+
+  await reset();
+  const abaRevision = await revision();
+  await page.evaluate(() => { document.querySelector("#checkbox-patch").click(); const input = document.querySelector("#fixture-checkbox-input"); input.click(); input.click(); });
+  await waitRevision(abaRevision);
+  await page.waitForFunction(() => document.querySelector("#checkbox-events").textContent.trim() === "false,true");
+  assert.equal(await input.isChecked(), true);
+
+  await reset(); await input.click();
+  await page.waitForFunction(() => document.querySelector("#checkbox-events").textContent.trim() === "false");
+  await page.locator("#checkbox-sibling").fill("edited");
+  await page.locator("#checkbox-form").evaluate(form => form.addEventListener("reset", event => event.preventDefault(), {once: true}));
+  await page.locator("#checkbox-native-reset").click(); await page.waitForTimeout(20);
+  assert.equal(await input.isChecked(), false); assert.equal(await page.locator("#checkbox-sibling").inputValue(), "edited");
+  assert.equal(await events(), "false");
+  await page.locator("#checkbox-native-reset").click();
+  await page.waitForFunction(() => document.querySelector("#checkbox-events").textContent.trim() === "false,true");
+
+  await reset(); await input.click(); await page.waitForFunction(() => document.querySelector("#checkbox-events").textContent.trim() === "false");
+  const roRevision = await revision(); await page.locator("#checkbox-read-only").click(); await waitRevision(roRevision);
+  assert.equal(await input.getAttribute("aria-readonly"), "true"); const roEvents = await events(); await input.click(); assert.equal(await events(), roEvents);
+  await page.locator("#checkbox-native-reset").click(); await page.waitForTimeout(20); assert.equal(await input.isChecked(), false);
+
+  await reset(); const rejectRevision = await revision(); await page.locator("#checkbox-reject-next").click(); await waitRevision(rejectRevision);
+  await input.click(); await page.waitForFunction(() => document.querySelector("#fixture-checkbox-input")?.getAttribute("aria-readonly") === "true");
+  assert.equal(await input.isChecked(), true); assert.equal(await events(), "false");
+
+  await page.locator("#checkbox-external-form").evaluate(form => form.replaceWith(form.cloneNode(true)));
+  await page.locator("#checkbox-external-sibling").fill("edited");
+  await page.locator("#checkbox-external-reset").click();
+  assert.equal(await page.locator("#checkbox-external-sibling").inputValue(), "original");
+  assert.equal(await page.locator("#fixture-checkbox-external-input").isChecked(), false);
+
+  await reset(); const serverRevision = await revision(); await page.locator("#checkbox-server-false").click(); await waitRevision(serverRevision);
+  assert.equal(await input.isChecked(), false); assert.equal(await events(), "");
+  await reset(); const disabledRevision = await revision(); await page.locator("#checkbox-disable").click(); await waitRevision(disabledRevision);
+  assert.equal(await input.isDisabled(), true); assert.deepEqual(await page.locator("#checkbox-form").evaluate(form => [...new FormData(form).entries()]), []);
+}
+
 async function runRadioGroup(page) {
   const root = page.locator("#fixture-radio");
   const inputs = root.locator("[data-lvc-radio-input]");
@@ -1350,6 +1414,7 @@ async function run(browserType, name, iteration) {
     await runTooltip(page);
     await runAccordion(page);
     await runSwitch(page);
+    await runCheckbox(page);
     await runRadioGroup(page);
     await runMenuNavigation(page, context);
     console.log(`PASS ${name} context ${iteration}`);

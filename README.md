@@ -11,7 +11,7 @@ This independent community project explores a narrow ownership model: LiveView k
 Add LiveView Continuity to your dependencies:
 
 ```elixir
-{:liveview_continuity, "~> 0.8.0"}
+{:liveview_continuity, "~> 0.9.0"}
 ```
 
 The package requires Elixir 1.18 or newer, Phoenix 1.8 or newer, and Phoenix LiveView 1.1 or newer. Phoenix 1.8 is required by colocated hooks. Add the LiveView compiler to the consuming project:
@@ -201,6 +201,17 @@ def handle_event("set_ticket_sale", %{"checked" => checked}, socket) when is_boo
 end
 ```
 
+## Checkbox
+
+`<.checkbox>` provides native checkbox semantics (without `role="switch"`) with the same server-authoritative, optimistic, stale-patch-safe checked-state contract. Native FormData, required/disabled behavior, cancelable reset, external form ownership, synthetic read-only, structured labels, and description/error composition are preserved. Events are owner-targeted, so a checkbox nested in a LiveComponent sends exactly `%{"checked" => boolean}` to that component. See [CHECKBOX.md](CHECKBOX.md).
+
+```heex
+<.checkbox id="terms" name="terms" value="accepted" checked={@accepted} on_change="set_terms" required>
+  <span>Accept terms</span>
+  <:description>Required to continue.</:description>
+</.checkbox>
+```
+
 ## Popover
 
 ```heex
@@ -235,7 +246,7 @@ npm run test:browser
 mix live_interaction_contracts.check \
   --url http://127.0.0.1:4140 \
   --contract test/interaction_contracts/menu_patch.json
-# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, accordion_patch.json, disclosure_patch.json, popover_patch.json, radio_group_patch.json, and switch_patch.json
+# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, accordion_patch.json, disclosure_patch.json, popover_patch.json, radio_group_patch.json, switch_patch.json, and checkbox_patch.json
 ```
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.

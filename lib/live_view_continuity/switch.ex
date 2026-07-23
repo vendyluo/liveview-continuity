@@ -113,7 +113,9 @@ defmodule LiveViewContinuity.Switch do
             const input = this.input();
             input.defaultChecked = this.initialDefault;
             const desired = this.desired();
-            if (this.hasPending) {
+            if (this.hasPending && (this.readOnly() || this.componentDisabled())) {
+              this.clearPending();
+            } else if (this.hasPending) {
               if (desired !== this.pendingBaseline) this.pendingSawDifferent = true;
               if (desired === this.pending && (desired !== this.pendingBaseline || this.pendingSawDifferent)) this.clearPending();
             }
@@ -154,7 +156,7 @@ defmodule LiveViewContinuity.Switch do
             this.pendingBaseline = this.desired();
             this.pendingSawDifferent = false;
             this.reflect(checked);
-            this.pushEvent(this.el.dataset.lvcAction, {checked});
+            this.pushEventTo(this.el, this.el.dataset.lvcAction, {checked});
           },
           clearPending() {
             this.hasPending = false;
