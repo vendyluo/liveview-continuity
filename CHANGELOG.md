@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 — 2026-07-23
+
+- Add a standalone, browser-owned Disclosure that preserves expanded state and synchronized ARIA/visibility attributes across retained LiveView patches.
+
 ## 0.4.0 — 2026-07-22
 
 - Add a controlled Dialog mode that omits the trigger and `on_open` for server-driven confirmation flows while preserving native modal, close, focus, and patch-continuity behavior.

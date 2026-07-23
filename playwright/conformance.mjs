@@ -462,6 +462,62 @@ async function runAccordion(page) {
   assert.equal(await root.locator(":scope > [data-lvc-accordion-item]").count(), 3);
 }
 
+async function runDisclosure(page) {
+  const root = page.locator("#fixture-disclosure");
+  const trigger = page.locator("#fixture-disclosure-trigger");
+  const panel = page.locator("#fixture-disclosure-panel");
+  const revision = async () => Number(await root.getAttribute("data-revision"));
+  const patch = async () => {
+    const before = await revision();
+    await page.locator("#disclosure-patch").evaluate(element => element.click());
+    await page.waitForFunction(value => Number(document.querySelector("#fixture-disclosure").dataset.revision) > value, before);
+  };
+
+  assert.equal(await root.getAttribute("data-lvc-open"), "false");
+  assert.equal(await trigger.getAttribute("aria-controls"), "fixture-disclosure-panel");
+  assert.equal(await trigger.getAttribute("aria-expanded"), "false");
+  assert.equal(await panel.getAttribute("aria-labelledby"), "fixture-disclosure-trigger");
+  assert.equal(await panel.getAttribute("aria-hidden"), "true");
+  assert.equal(await panel.getAttribute("hidden"), "");
+
+  for (const mode of ["click", "Enter", "Space"]) {
+    if (mode === "click") await trigger.click();
+    else {
+      await trigger.focus();
+      await page.keyboard.press(mode);
+    }
+    assert.equal(await root.getAttribute("data-lvc-open"), "true");
+    assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+    assert.equal(await panel.getAttribute("aria-hidden"), "false");
+    assert.equal(await panel.getAttribute("hidden"), null);
+    await trigger.click();
+    assert.equal(await root.getAttribute("data-lvc-open"), "false");
+  }
+
+  assert.equal(await page.locator("#fixture-disclosure-default-open").getAttribute("data-lvc-open"), "true");
+  assert.equal(await page.locator("#fixture-disclosure-default-open-panel").getAttribute("hidden"), null);
+
+  await trigger.click();
+  await trigger.focus();
+  const triggerHandle = await trigger.elementHandle();
+  const panelHandle = await panel.elementHandle();
+  await patch();
+  assert.equal(await page.evaluate(([a, b]) => a === b, [triggerHandle, await trigger.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a, b]) => a === b, [panelHandle, await panel.elementHandle()]), true);
+  await focusId(page, "fixture-disclosure-trigger");
+  assert.equal(await root.getAttribute("data-lvc-open"), "true");
+  assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+  assert.equal(await panel.getAttribute("hidden"), null);
+  assert.match(await panel.textContent(), /revision 1/);
+
+  await trigger.click();
+  await page.locator("#disclosure-outside").focus();
+  await patch();
+  await focusId(page, "disclosure-outside");
+  assert.equal(await root.getAttribute("data-lvc-open"), "false");
+  assert.equal(await panel.getAttribute("hidden"), "");
+}
+
 async function runDialog(page) {
   const root = page.locator("#fixture-dialog");
   const trigger = page.locator("#fixture-dialog-trigger");
@@ -1046,6 +1102,7 @@ async function run(browserType, name, iteration) {
     }
 
     await runTabs(page);
+    await runDisclosure(page);
     await runDialog(page);
     await runControlledDialog(page);
     await runActionTooltip(page);

@@ -5,6 +5,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
   import LiveViewContinuity.Dialog
   import LiveViewContinuity.Tooltip
   import LiveViewContinuity.Accordion
+  import LiveViewContinuity.Disclosure
   import LiveViewContinuity.RadioGroup
 
   @base_items [
@@ -58,6 +59,7 @@ defmodule ContinuityFixtureWeb.MenuLive do
        controlled_dialog_open: false,
        controlled_dialog_revision: 0,
        controlled_dialog_closes: [],
+       disclosure_revision: 0,
        tooltip_revision: 0,
        tooltip_delay: 120,
        tooltip_disabled: false,
@@ -151,6 +153,19 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <output id="tabs-mode">{@tab_mode}</output>
       <output id="tabs-selected">{@selected}</output>
       <output id="tabs-selections">{Enum.join(@tab_selections, ",")}</output>
+
+      <h2>Disclosure fixture</h2>
+      <.disclosure id="fixture-disclosure" data-revision={@disclosure_revision}>
+        <:trigger>Show disclosure details</:trigger>
+        Disclosure content revision {@disclosure_revision}
+        <input id="disclosure-panel-input" aria-label="Disclosure panel input" />
+      </.disclosure>
+      <.disclosure id="fixture-disclosure-default-open" default_expanded>
+        <:trigger>Default-open disclosure</:trigger>
+        Default-open content
+      </.disclosure>
+      <input id="disclosure-outside" aria-label="Outside disclosure" />
+      <button id="disclosure-patch" phx-click="disclosure_patch">Patch disclosure</button>
 
       <h2>Accordion fixture</h2>
       <.accordion
@@ -486,6 +501,9 @@ defmodule ContinuityFixtureWeb.MenuLive do
 
   def handle_event("accordion_patch", _, socket),
     do: {:noreply, update(socket, :accordion_revision, &(&1 + 1))}
+
+  def handle_event("disclosure_patch", _, socket),
+    do: {:noreply, update(socket, :disclosure_revision, &(&1 + 1))}
 
   def handle_event("accordion_reorder", _, socket),
     do:

@@ -11,7 +11,7 @@ This independent community project explores a narrow ownership model: LiveView k
 Add LiveView Continuity to your dependencies:
 
 ```elixir
-{:liveview_continuity, "~> 0.4.0"}
+{:liveview_continuity, "~> 0.5.0"}
 ```
 
 The package requires Elixir 1.18 or newer, Phoenix 1.8 or newer, and Phoenix LiveView 1.1 or newer. Phoenix 1.8 is required by colocated hooks. Add the LiveView compiler to the consuming project:
@@ -149,6 +149,17 @@ The 0.1 Menu intentionally excludes selection, check/radio menu items, submenus,
 
 LiveView owns items and authoritative `values`; the hook reflects each native button/panel immediately and preserves the latest unacknowledged desired set through stale patches. The event payload is `%{"id" => id, "open" => boolean, "values" => values}` and the handler acknowledges it by assigning `values`. Panels remain mounted, headings use native buttons, disabled triggers remain focusable and inert, and region landmarks are opt-in. See [ACCORDION.md](ACCORDION.md).
 
+## Disclosure
+
+```heex
+<.disclosure id="account-details" default_expanded={false}>
+  <:trigger>Account details</:trigger>
+  Content remains mounted and server-patchable.
+</.disclosure>
+```
+
+Disclosure is a standalone browser-owned boolean: `default_expanded` seeds only SSR or a newly mounted instance, while a retained root preserves effective open state across LiveView patches. The native trigger and panel keep `aria-expanded`, `hidden`, and `aria-hidden` synchronized without sending a server event. Use root `data-lvc-open` for indicator styling. See [DISCLOSURE.md](DISCLOSURE.md).
+
 ## Radio Group
 
 `<.radio_group>` renders native radios and keeps browser selection optimistic through stale LiveView patches while the server remains authoritative. Native Space, validation, FormData, and reset semantics are preserved; a local Arrow handler only normalizes cross-engine wrap behavior, and `read_only` is the narrow interception required because HTML radios have no readonly attribute. See [RADIO_GROUP.md](RADIO_GROUP.md).
@@ -173,7 +184,7 @@ npm run test:browser
 mix live_interaction_contracts.check \
   --url http://127.0.0.1:4140 \
   --contract test/interaction_contracts/menu_patch.json
-# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, accordion_patch.json, and radio_group_patch.json
+# Run again with test/interaction_contracts/tabs_patch.json, dialog_patch.json, tooltip_patch.json, accordion_patch.json, disclosure_patch.json, and radio_group_patch.json
 ```
 
 Also run `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix test`, `node --check playwright/conformance.mjs`, `test/package-smoke.sh`, `mix hex.build`, and `mix docs`. The fixture uses loopback port 4140 and the shipped component plus its compiler-extracted colocated hook. The package smoke unpacks the Hex artifact into a fresh consumer, compiles it, and bundles the extracted hook through esbuild.

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "continuity-disclosure-survives-acknowledged-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-disclosure"},
+  "activate": [{"type": "click", "selector": "#fixture-disclosure-trigger"}],
+  "patch": {
+    "trigger": {"type": "click", "selector": "#disclosure-patch"},
+    "ack": {"type": "attribute_change", "selector": "#fixture-disclosure", "attribute": "data-revision"}
+  },
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-disclosure-trigger", "after": "same"},
+    {"probe": "node_identity", "selector": "#fixture-disclosure-panel", "after": "same"},
+    {"probe": "attribute", "selector": "#fixture-disclosure", "attribute": "data-lvc-open", "before": {"value": "true"}, "after": {"value": "true"}},
+    {"probe": "attribute", "selector": "#fixture-disclosure-trigger", "attribute": "aria-expanded", "before": {"value": "true"}, "after": {"value": "true"}}
+  ]
+}
