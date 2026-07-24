@@ -1,7 +1,7 @@
 defmodule LiveViewContinuity.MixProject do
   use Mix.Project
 
-  @version "0.9.0"
+  @version "0.10.0"
   @source_url "https://github.com/vendyluo/liveview-continuity"
 
   def project do
@@ -29,6 +29,7 @@ defmodule LiveViewContinuity.MixProject do
           "RADIO_GROUP.md",
           "SWITCH.md",
           "CHECKBOX.md",
+          "SELECT.md",
           "CHANGELOG.md"
         ]
       ],
@@ -59,7 +60,7 @@ defmodule LiveViewContinuity.MixProject do
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
       files:
-        ~w(lib mix.exs README.md MENU.md TABS.md DIALOG.md TOOLTIP.md APPLICATION_INTEGRATION.md ACCORDION.md DISCLOSURE.md POPOVER.md RADIO_GROUP.md SWITCH.md CHECKBOX.md CHANGELOG.md LICENSE)
+        ~w(lib mix.exs README.md MENU.md TABS.md DIALOG.md TOOLTIP.md APPLICATION_INTEGRATION.md ACCORDION.md DISCLOSURE.md POPOVER.md RADIO_GROUP.md SWITCH.md CHECKBOX.md SELECT.md CHANGELOG.md LICENSE)
     ]
   end
 end

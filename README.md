@@ -11,7 +11,7 @@ This independent community project explores a narrow ownership model: LiveView k
 Add LiveView Continuity to your dependencies:
 
 ```elixir
-{:liveview_continuity, "~> 0.9.0"}
+{:liveview_continuity, "~> 0.10.0"}
 ```
 
 The package requires Elixir 1.18 or newer, Phoenix 1.8 or newer, and Phoenix LiveView 1.1 or newer. Phoenix 1.8 is required by colocated hooks. Add the LiveView compiler to the consuming project:
@@ -28,6 +28,17 @@ import {hooks as continuityHooks} from "phoenix-colocated/liveview_continuity";
 const liveSocket = new LiveSocket("/live", Socket, {
   hooks: {...continuityHooks}
 });
+```
+
+## Select
+
+`<.select>` is a custom single-select listbox backed by one visually hidden native select for FormData, validation, external forms, and reset. It supports optimistic server-authoritative selection, disabled options, synthetic read-only, keyboard navigation, and buffered typeahead. Events are owner-targeted. See [SELECT.md](SELECT.md).
+
+```heex
+<.select id="status" name="status" value={@status} on_change="set_status" label="Status" placeholder="Choose a status">
+  <:option value="draft">Draft</:option>
+  <:option value="published">Published</:option>
+</.select>
 ```
 
 ## Menu

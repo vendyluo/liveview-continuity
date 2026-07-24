@@ -129,7 +129,7 @@ defmodule LiveViewContinuity.Tabs do
           },
           activate(tab) {
             if (tab.getAttribute("aria-disabled") === "true") return;
-            this.pushEvent(this.el.dataset.lvcAction, {id: tab.dataset.lvcLogicalId});
+            this.pushEventTo(this.el, this.el.dataset.lvcAction, {id: tab.dataset.lvcLogicalId});
           },
           setCursor(tab, focused) {
             const tabs = this.tabs();

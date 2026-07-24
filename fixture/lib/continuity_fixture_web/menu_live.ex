@@ -334,6 +334,8 @@ defmodule ContinuityFixtureWeb.MenuLive do
       <output id="switch-events">{Enum.map_join(@switch_events, ",", &to_string/1)}</output>
 
       <.live_component module={ContinuityFixtureWeb.CheckboxComponent} id="checkbox-owner" />
+      <.live_component module={ContinuityFixtureWeb.SelectComponent} id="select-owner" />
+      <.live_component module={ContinuityFixtureWeb.OwnerTargetsComponent} id="owner-targets" />
 
       <h2>Dialog fixture</h2>
       <.dialog
@@ -847,6 +849,315 @@ defmodule ContinuityFixtureWeb.MenuLive do
        tab_revision: socket.assigns.tab_revision + 1
      )}
   end
+end
+
+defmodule ContinuityFixtureWeb.OwnerTargetsComponent do
+  use Phoenix.LiveComponent
+  import LiveViewContinuity.Accordion
+  import LiveViewContinuity.Dialog
+  import LiveViewContinuity.Menu
+  import LiveViewContinuity.RadioGroup
+  import LiveViewContinuity.Tabs
+
+  def mount(socket) do
+    {:ok,
+     assign(socket,
+       accordion: [],
+       menu: [],
+       radio: "one",
+       tabs: "one",
+       dialog: false,
+       opens: 0,
+       closes: []
+     )}
+  end
+
+  def render(assigns) do
+    ~H"""
+    <section id="owner-target-fixture">
+      <.accordion
+        id="owner-accordion"
+        values={@accordion}
+        on_change="owner_accordion"
+        phx-target={@myself}
+      >
+        <:item id="item" label="Owner accordion">Content</:item>
+      </.accordion>
+      <.menu id="owner-menu" on_action="owner_menu" phx-target={@myself}>
+        <:trigger>Owner menu</:trigger>
+        <:item id="action">Owner action</:item>
+      </.menu>
+      <.radio_group
+        id="owner-radio"
+        name="owner-radio"
+        value={@radio}
+        on_change="owner_radio"
+        label="Owner radio"
+        phx-target={@myself}
+      >
+        <:option value="one" label="One" />
+        <:option value="two" label="Two" />
+      </.radio_group>
+      <.tabs
+        id="owner-tabs"
+        value={@tabs}
+        on_select="owner_tabs"
+        label="Owner tabs"
+        phx-target={@myself}
+      >
+        <:tab id="one" label="One">One panel</:tab>
+        <:tab id="two" label="Two">Two panel</:tab>
+      </.tabs>
+      <.dialog
+        id="owner-dialog"
+        open={@dialog}
+        on_open="owner_dialog_open"
+        on_close="owner_dialog_close"
+        phx-target={@myself}
+      >
+        <:trigger>Owner dialog</:trigger>
+        <:title>Owner dialog</:title>
+        Owner dialog content
+        <:close>Close owner dialog</:close>
+      </.dialog>
+      <output id="owner-accordion-output">{inspect(@accordion)}</output>
+      <output id="owner-menu-output">{Enum.join(@menu, ",")}</output>
+      <output id="owner-radio-output">{@radio}</output>
+      <output id="owner-tabs-output">{@tabs}</output>
+      <output id="owner-dialog-output">{@opens}:{Enum.join(@closes, ",")}</output>
+    </section>
+    """
+  end
+
+  def handle_event(
+        "owner_accordion",
+        %{"id" => "item", "open" => open, "values" => values} = payload,
+        socket
+      )
+      when map_size(payload) == 3 and is_boolean(open) and is_list(values),
+      do: {:noreply, assign(socket, :accordion, values)}
+
+  def handle_event("owner_menu", %{"id" => "action"} = payload, socket)
+      when map_size(payload) == 1,
+      do: {:noreply, update(socket, :menu, &(&1 ++ ["action"]))}
+
+  def handle_event("owner_radio", %{"value" => value} = payload, socket)
+      when map_size(payload) == 1 and value in ["one", "two"],
+      do: {:noreply, assign(socket, :radio, value)}
+
+  def handle_event("owner_tabs", %{"id" => id} = payload, socket)
+      when map_size(payload) == 1 and id in ["one", "two"],
+      do: {:noreply, assign(socket, :tabs, id)}
+
+  def handle_event("owner_dialog_open", payload, socket) when map_size(payload) == 0,
+    do: {:noreply, socket |> assign(:dialog, true) |> update(:opens, &(&1 + 1))}
+
+  def handle_event("owner_dialog_close", %{"reason" => reason} = payload, socket)
+      when map_size(payload) == 1,
+      do: {:noreply, socket |> assign(:dialog, false) |> update(:closes, &(&1 ++ [reason]))}
+end
+
+defmodule ContinuityFixtureWeb.SelectComponent do
+  use Phoenix.LiveComponent
+  import LiveViewContinuity.Select
+
+  def mount(socket), do: {:ok, reset_assigns(socket, 0)}
+
+  def render(assigns) do
+    ~H"""
+    <section id="select-component">
+      <h2>Select fixture</h2>
+      <form id="select-external-form">
+        <input id="select-external-sibling" value="external-original" />
+        <button id="select-external-reset" type="reset">Reset external select form</button>
+      </form>
+      <form id="select-form">
+        <input id="select-sibling" value="original" />
+        <.select
+          id="fixture-select"
+          name="choice"
+          value={@value}
+          on_change="select_change"
+          label="Choice"
+          placeholder="Choose"
+          required
+          read_only={@read_only}
+          disabled={@disabled}
+          form={@external && "select-external-form"}
+          phx-target={@myself}
+          data-revision={@revision}
+        >
+          <:description>
+            Pick one option.
+            <span id="select-patch" phx-click="patch" phx-target={@myself}>Patch select</span>
+          </:description>
+          <:option
+            :for={option <- @options}
+            value={option.value}
+            disabled={option.disabled}
+          >
+            {option.label}
+          </:option>
+        </.select>
+        <button id="select-native-reset" type="reset">Reset select form</button>
+      </form>
+      <button id="select-reset" phx-click="reset" phx-target={@myself}>Reset fixture</button>
+      <button id="select-server-nil" phx-click="server_nil" phx-target={@myself}>Server nil</button>
+      <button id="select-reorder" phx-click="reorder" phx-target={@myself}>Reorder options</button>
+      <button id="select-remove-alpha" phx-click="remove_alpha" phx-target={@myself}>Remove initial default</button>
+      <button id="select-readd-alpha" phx-click="readd_alpha" phx-target={@myself}>Re-add initial default</button>
+      <button id="select-disable-charlie" phx-click="disable_charlie" phx-target={@myself}>Disable Charlie</button>
+      <button id="select-disable-all" phx-click="disable_all" phx-target={@myself}>Disable all options</button>
+      <button id="select-disable-root" phx-click="disable_root" phx-target={@myself}>Disable Select</button>
+      <button id="select-external-owner" phx-click="external_owner" phx-target={@myself}>Use external form</button>
+      <button id="select-reject-read-only" phx-click="reject_read_only" phx-target={@myself}>Reject next as read only</button>
+      <button id="select-reject-disabled" phx-click="reject_disabled" phx-target={@myself}>Reject next as disabled</button>
+      <button id="select-reject-removed" phx-click="reject_removed" phx-target={@myself}>Reject next by removing option</button>
+      <output id="select-events">{Enum.join(@events, ",")}</output>
+      <form id="select-required-pair">
+        <.select
+          id="required-first"
+          name="first"
+          value={@empty}
+          on_change="select_change"
+          label="First"
+          required
+          phx-target={@myself}
+        >
+          <:option value="one">One</:option>
+        </.select>
+        <.select
+          id="required-second"
+          name="second"
+          value={@empty}
+          on_change="select_change"
+          label="Second"
+          required
+          phx-target={@myself}
+        >
+          <:option value="two">Two</:option>
+        </.select>
+        <button id="select-required-pair-submit">Submit pair</button>
+      </form>
+      <form id="select-input-first-form">
+        <input id="select-input-first" required />
+        <.select
+          id="required-after-input"
+          name="after_input"
+          value={@empty}
+          on_change="select_change"
+          label="After input"
+          required
+          phx-target={@myself}
+        >
+          <:option value="one">One</:option>
+        </.select>
+        <button id="select-input-first-submit">Submit input first</button>
+      </form>
+    </section>
+    """
+  end
+
+  def handle_event("select_change", %{"value" => value} = payload, socket)
+      when map_size(payload) == 1 and (is_binary(value) or is_nil(value)) do
+    socket = update(socket, :events, &(&1 ++ [value || "nil"]))
+
+    socket =
+      case socket.assigns.reject_next do
+        :read_only ->
+          assign(socket, read_only: true, reject_next: nil)
+
+        :disabled ->
+          assign(socket, disabled: true, reject_next: nil)
+
+        :removed ->
+          assign(socket,
+            options: Enum.reject(socket.assigns.options, &(&1.value == value)),
+            reject_next: nil
+          )
+
+        nil ->
+          assign(socket, :value, value)
+      end
+
+    {:noreply, bump(socket)}
+  end
+
+  def handle_event("patch", _, socket), do: {:noreply, bump(socket)}
+
+  def handle_event("server_nil", _, socket),
+    do: {:noreply, socket |> assign(:value, nil) |> bump()}
+
+  def handle_event("reorder", _, socket),
+    do: {:noreply, socket |> update(:options, &Enum.reverse/1) |> bump()}
+
+  def handle_event("remove_alpha", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(:options, &Enum.reject(&1, fn option -> option.value == "alpha" end))
+       |> bump()}
+
+  def handle_event("readd_alpha", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(:options, fn options ->
+         [%{value: "alpha", label: "Álpha", disabled: false} | options]
+       end)
+       |> bump()}
+
+  def handle_event("disable_charlie", _, socket),
+    do: {:noreply, socket |> update(:options, &disable_options(&1, ["charlie"])) |> bump()}
+
+  def handle_event("disable_all", _, socket),
+    do:
+      {:noreply,
+       socket
+       |> update(:options, &disable_options(&1, Enum.map(&1, fn option -> option.value end)))
+       |> bump()}
+
+  def handle_event("disable_root", _, socket),
+    do: {:noreply, socket |> assign(:disabled, true) |> bump()}
+
+  def handle_event("external_owner", _, socket),
+    do: {:noreply, socket |> assign(:external, true) |> bump()}
+
+  def handle_event("reject_read_only", _, socket),
+    do: {:noreply, socket |> assign(:reject_next, :read_only) |> bump()}
+
+  def handle_event("reject_disabled", _, socket),
+    do: {:noreply, socket |> assign(:reject_next, :disabled) |> bump()}
+
+  def handle_event("reject_removed", _, socket),
+    do: {:noreply, socket |> assign(:reject_next, :removed) |> bump()}
+
+  def handle_event("reset", _, socket),
+    do: {:noreply, reset_assigns(socket, socket.assigns.revision + 1)}
+
+  defp reset_assigns(socket, revision) do
+    assign(socket,
+      value: "alpha",
+      empty: nil,
+      events: [],
+      revision: revision,
+      read_only: false,
+      disabled: false,
+      external: false,
+      reject_next: nil,
+      options: [
+        %{value: "alpha", label: "Álpha", disabled: false},
+        %{value: "disabled", label: "Disabled", disabled: true},
+        %{value: "bravo", label: "Bravo", disabled: false},
+        %{value: "charlie", label: "Charlie", disabled: false}
+      ]
+    )
+  end
+
+  defp disable_options(options, values),
+    do: Enum.map(options, &Map.put(&1, :disabled, &1.value in values))
+
+  defp bump(socket), do: update(socket, :revision, &(&1 + 1))
 end
 
 defmodule ContinuityFixtureWeb.CheckboxComponent do

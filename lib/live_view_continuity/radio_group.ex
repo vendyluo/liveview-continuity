@@ -201,7 +201,7 @@ defmodule LiveViewContinuity.RadioGroup do
             this.pendingReplied = false;
             const generation = ++this.intentGeneration;
             this.reflect(value);
-            this.pushEvent(this.el.dataset.lvcAction, {value}, () => {
+            this.pushEventTo(this.el, this.el.dataset.lvcAction, {value}, () => {
               if (generation !== this.intentGeneration || !this.hasPending) return;
               this.pendingReplied = true;
               if (this.desired() === this.pending) {

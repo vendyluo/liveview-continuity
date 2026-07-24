@@ -133,7 +133,7 @@ defmodule LiveViewContinuity.Accordion do
             values = this.ids().filter(value => values.includes(value));
             this.pending = values;
             this.reflect(values);
-            this.pushEvent(this.el.dataset.lvcAction, {id, open: !wasOpen, values});
+            this.pushEventTo(this.el, this.el.dataset.lvcAction, {id, open: !wasOpen, values});
           },
           reflect(values) {
             this.el.dataset.lvcValues = JSON.stringify(values);

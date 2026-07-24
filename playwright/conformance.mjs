@@ -151,6 +151,95 @@ async function runSwitch(page) {
   assert.deepEqual(await page.locator("#switch-form").evaluate(form => [...new FormData(form).entries()]), []);
 }
 
+async function runSelect(page) {
+  const root = page.locator("#fixture-select"), trigger = page.locator("#fixture-select-trigger"), native = page.locator("#fixture-select-native"), value = page.locator("#fixture-select-value");
+  const popup = page.locator("#fixture-select-popup"), events = page.locator("#select-events");
+  const option = name => page.locator(`#fixture-select-option-${Buffer.from(name).toString("base64url")}`);
+  const revision = async () => Number(await root.getAttribute("data-revision"));
+  const waitRevision = before => page.waitForFunction(value => Number(document.querySelector("#fixture-select").dataset.revision) > value, before);
+  const server = async selector => { const before = await revision(); await page.locator(selector).click(); await waitRevision(before); };
+  const serverWithoutPointer = async selector => { const before = await revision(); await page.locator(selector).evaluate(element => element.click()); await waitRevision(before); };
+  const reset = () => server("#select-reset");
+  const choose = async name => { await trigger.click(); await option(name).click(); await page.waitForFunction(expected => document.querySelector("#select-events").textContent.trim().endsWith(expected), name); };
+
+  assert.equal(await trigger.getAttribute("aria-haspopup"), "listbox");
+  assert.equal(await trigger.getAttribute("role"), "combobox"); assert.equal(await trigger.getAttribute("aria-required"), "true");
+  assert.equal(await trigger.getAttribute("aria-invalid"), "false");
+  assert.deepEqual(await native.evaluate(element => ({width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height, rendered: getComputedStyle(element).display !== "none"})), {width: 1, height: 1, rendered: true});
+  assert.deepEqual(await page.locator("#select-form").evaluate(f => [...new FormData(f).entries()]), [["choice", "alpha"]]);
+  await server("#select-server-nil"); assert.equal((await value.textContent()).trim(), "Choose"); assert.equal(await native.inputValue(), "");
+  assert.equal(await trigger.getAttribute("aria-invalid"), "false"); assert.equal(await native.evaluate(element => element.checkValidity()), false);
+  assert.equal(await native.evaluate(element => element.reportValidity()), false); await focusId(page, "fixture-select-trigger"); assert.equal(await trigger.getAttribute("aria-invalid"), "true");
+  await page.locator("#select-required-pair-submit").click(); await page.waitForTimeout(20); await focusId(page, "required-first-trigger");
+  await page.locator("#select-input-first-submit").click(); await page.waitForTimeout(20); await focusId(page, "select-input-first");
+  await reset();
+
+  await trigger.click(); assert.equal(await root.getAttribute("data-lvc-open"), "true"); await trigger.click(); assert.equal(await root.getAttribute("data-lvc-open"), "false");
+  await trigger.click(); await page.locator("#select-reset").click(); await page.waitForFunction(() => document.querySelector("#fixture-select").dataset.lvcOpen === "false"); assert.equal(await popup.evaluate(element => element.contains(document.activeElement)), false);
+
+  await trigger.focus(); await page.keyboard.press("ArrowDown"); await focusId(page, "fixture-select-option-YWxwaGE");
+  await page.keyboard.press("ArrowDown"); await focusId(page, "fixture-select-option-YnJhdm8");
+  await page.keyboard.press("End"); await focusId(page, "fixture-select-option-Y2hhcmxpZQ");
+  await page.keyboard.press("Home"); await focusId(page, "fixture-select-option-YWxwaGE");
+  await page.keyboard.press("b"); await page.keyboard.press("r"); await focusId(page, "fixture-select-option-YnJhdm8");
+  await page.waitForTimeout(550); await page.keyboard.press("a"); await focusId(page, "fixture-select-option-YWxwaGE");
+  await page.waitForTimeout(550); await page.keyboard.press("c"); await focusId(page, "fixture-select-option-Y2hhcmxpZQ");
+  await page.waitForTimeout(550); await page.keyboard.press("b"); await focusId(page, "fixture-select-option-YnJhdm8");
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.querySelector("#select-events").textContent.trim() === "bravo");
+  assert.equal(await native.inputValue(), "bravo"); assert.equal(await root.getAttribute("data-lvc-value"), "bravo");
+
+  await trigger.focus(); await page.keyboard.press("ArrowDown"); await page.keyboard.press("c"); await focusId(page, "fixture-select-option-Y2hhcmxpZQ");
+  const triggerHandle = await trigger.elementHandle(), popupHandle = await popup.elementHandle(), optionHandle = await option("charlie").elementHandle();
+  const before = await revision(); await page.locator("#select-patch").click();
+  await page.waitForFunction(v => Number(document.querySelector("#fixture-select").dataset.revision) > v, before);
+  assert.equal(await page.evaluate(([a,b]) => a === b, [triggerHandle, await trigger.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a,b]) => a === b, [popupHandle, await popup.elementHandle()]), true);
+  assert.equal(await page.evaluate(([a,b]) => a === b, [optionHandle, await option("charlie").elementHandle()]), true);
+  await focusId(page, "fixture-select-option-Y2hhcmxpZQ"); await page.keyboard.press("Escape"); await focusId(page, "fixture-select-trigger");
+  await trigger.press("ArrowDown"); await page.keyboard.press("Tab"); await page.waitForFunction(() => document.querySelector("#fixture-select").dataset.lvcOpen === "false"); assert.equal(await popup.evaluate(element => element.contains(document.activeElement)), false);
+
+  await reset(); await trigger.press("ArrowDown"); await page.keyboard.press("c"); await focusId(page, "fixture-select-option-Y2hhcmxpZQ");
+  await serverWithoutPointer("#select-reorder"); await focusId(page, "fixture-select-option-Y2hhcmxpZQ"); assert.equal(await page.evaluate(([a,b]) => a === b, [optionHandle, await option("charlie").elementHandle()]), true);
+  const reorderedCharlie = await option("charlie").elementHandle(); await serverWithoutPointer("#select-disable-charlie"); await focusId(page, "fixture-select-option-YnJhdm8"); assert.equal(await page.evaluate(([a,b]) => a === b, [reorderedCharlie, await option("charlie").elementHandle()]), true);
+  await serverWithoutPointer("#select-disable-all"); await focusId(page, "fixture-select-trigger"); assert.equal(await root.getAttribute("data-lvc-open"), "false");
+
+  await reset(); await trigger.press("ArrowDown"); await serverWithoutPointer("#select-disable-root"); assert.equal(await popup.evaluate(element => element.matches(":popover-open")), false); assert.equal(await trigger.isDisabled(), true); assert.equal(await popup.evaluate(element => element.contains(document.activeElement)), false);
+
+  await reset(); await server("#select-reject-read-only"); await choose("bravo"); assert.equal(await root.getAttribute("data-lvc-value"), "alpha"); assert.equal(await native.inputValue(), "alpha"); assert.equal(await trigger.getAttribute("aria-readonly"), "true");
+  await reset(); await server("#select-reject-disabled"); await choose("bravo"); assert.equal(await root.getAttribute("data-lvc-value"), "alpha"); assert.equal(await native.inputValue(), "alpha"); assert.equal(await trigger.isDisabled(), true);
+  await reset(); await server("#select-reject-removed"); await choose("charlie"); assert.equal(await option("charlie").count(), 0); assert.equal(await root.getAttribute("data-lvc-value"), "alpha");
+
+  await reset(); await page.evaluate(() => { document.querySelector("#select-patch").click(); document.querySelector("#fixture-select-trigger").click(); document.querySelector("#fixture-select-option-YnJhdm8").click(); document.querySelector("#fixture-select-trigger").click(); document.querySelector("#fixture-select-option-YWxwaGE").click(); });
+  await page.waitForFunction(() => document.querySelector("#select-events").textContent.trim() === "bravo,alpha"); assert.equal(await root.getAttribute("data-lvc-value"), "alpha"); assert.equal(await native.inputValue(), "alpha");
+
+  await reset(); await choose("bravo"); await page.locator("#select-sibling").fill("edited"); await page.locator("#select-form").evaluate(form => form.addEventListener("reset", event => event.preventDefault(), {once: true})); await page.locator("#select-native-reset").click(); await page.waitForTimeout(20); assert.equal(await native.inputValue(), "bravo"); assert.equal(await page.locator("#select-sibling").inputValue(), "edited"); assert.equal((await events.textContent()).trim(), "bravo");
+  await page.locator("#select-native-reset").click(); await page.waitForFunction(() => document.querySelector("#select-events").textContent.trim() === "bravo,alpha"); assert.equal(await page.locator("#select-sibling").inputValue(), "original");
+
+  await reset(); await choose("bravo"); await server("#select-reject-read-only"); await choose("charlie"); await page.locator("#select-sibling").fill("edited"); const readOnlyEvents = (await events.textContent()).trim(); await page.locator("#select-native-reset").click(); await page.waitForTimeout(20); assert.equal(await native.inputValue(), "bravo"); assert.equal((await events.textContent()).trim(), readOnlyEvents); assert.equal(await page.locator("#select-sibling").inputValue(), "original");
+  await reset(); await choose("bravo"); await server("#select-disable-root"); await page.locator("#select-sibling").fill("edited"); const disabledEvents = (await events.textContent()).trim(); await page.locator("#select-native-reset").click(); await page.waitForTimeout(20); assert.equal(await native.inputValue(), "bravo"); assert.equal((await events.textContent()).trim(), disabledEvents); assert.equal(await page.locator("#select-sibling").inputValue(), "original");
+
+  await reset(); await choose("bravo"); await server("#select-external-owner"); assert.deepEqual(await page.locator("#select-form").evaluate(form => [...new FormData(form).entries()]), []); assert.deepEqual(await page.locator("#select-external-form").evaluate(form => [...new FormData(form).entries()]), [["choice", "bravo"]]); await page.locator("#select-external-sibling").fill("edited"); await page.locator("#select-external-form").evaluate(form => form.replaceWith(form.cloneNode(true))); await page.locator("#select-external-reset").click(); await page.waitForFunction(() => document.querySelector("#select-events").textContent.trim() === "bravo,alpha"); assert.equal(await page.locator("#select-external-sibling").inputValue(), "external-original");
+
+  await reset(); await choose("bravo"); await server("#select-remove-alpha"); await page.locator("#select-native-reset").click(); await page.waitForFunction(() => document.querySelector("#select-events").textContent.trim() === "bravo,nil"); assert.equal(await native.inputValue(), ""); assert.equal((await value.textContent()).trim(), "Choose");
+  await server("#select-readd-alpha"); assert.equal(await native.evaluate(element => [...element.options].find(option => option.value === "alpha").defaultSelected), true); await choose("bravo"); await page.locator("#select-native-reset").click(); await page.waitForFunction(() => document.querySelector("#select-events").textContent.trim().endsWith("alpha")); assert.equal(await native.inputValue(), "alpha");
+}
+
+async function runOwnerTargets(page) {
+  await page.locator("#owner-accordion-trigger-item").click();
+  await page.waitForFunction(() => document.querySelector("#owner-accordion-output").textContent.trim() === '["item"]');
+  await page.locator("#owner-menu-trigger").click(); await page.locator("#owner-menu-item-action").click();
+  await page.waitForFunction(() => document.querySelector("#owner-menu-output").textContent.trim() === "action");
+  await page.locator("#owner-radio-option-two").click();
+  await page.waitForFunction(() => document.querySelector("#owner-radio-output").textContent.trim() === "two");
+  await page.locator("#owner-tabs-tab-two").click();
+  await page.waitForFunction(() => document.querySelector("#owner-tabs-output").textContent.trim() === "two");
+  await page.locator("#owner-dialog-trigger").click();
+  await page.waitForFunction(() => document.querySelector("#owner-dialog-output").textContent.trim() === "1:");
+  await page.locator("#owner-dialog-close").click();
+  await page.waitForFunction(() => document.querySelector("#owner-dialog-output").textContent.trim() === "1:close");
+}
+
 async function runCheckbox(page) {
   const root = page.locator("#fixture-checkbox");
   const input = page.locator("#fixture-checkbox-input");
@@ -1415,6 +1504,8 @@ async function run(browserType, name, iteration) {
     await runAccordion(page);
     await runSwitch(page);
     await runCheckbox(page);
+    await runSelect(page);
+    await runOwnerTargets(page);
     await runRadioGroup(page);
     await runMenuNavigation(page, context);
     console.log(`PASS ${name} context ${iteration}`);

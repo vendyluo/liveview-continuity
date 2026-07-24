@@ -202,7 +202,7 @@ defmodule LiveViewContinuity.Dialog do
               if (!this.popup().open) {
                 this.pendingIntent = "open";
                 this.openNative();
-                this.pushEvent(this.el.dataset.lvcOnOpen, {});
+                this.pushEventTo(this.el, this.el.dataset.lvcOnOpen, {});
               }
             } else if (close === this.closeButton()) {
               this.pendingIntent = "close";
@@ -256,7 +256,7 @@ defmodule LiveViewContinuity.Dialog do
             if (reason) {
               this.el.dataset.lvcCloseReason = reason;
               this.pendingIntent = "close";
-              this.pushEvent(this.el.dataset.lvcOnClose, {reason});
+              this.pushEventTo(this.el, this.el.dataset.lvcOnClose, {reason});
             }
             setTimeout(() => {
               const active = document.activeElement;

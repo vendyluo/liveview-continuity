@@ -185,7 +185,7 @@ defmodule LiveViewContinuity.Menu do
           activateAction(item) {
             if (item.getAttribute("aria-disabled") === "true") return;
             const id = item.dataset.lvcLogicalId;
-            this.pushEvent(this.el.dataset.lvcAction, {id});
+            this.pushEventTo(this.el, this.el.dataset.lvcAction, {id});
             if (item.dataset.lvcCloseOnAction !== "false") this.close("action", true);
           },
           isNavigate(item) { return item.localName === "a"; },

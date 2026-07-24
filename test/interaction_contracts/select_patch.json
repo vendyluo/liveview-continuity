@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "continuity-select-survives-acknowledged-patch",
+  "route": "/",
+  "subject": {"selector": "#fixture-select"},
+  "activate": [{"type": "click", "selector": "#fixture-select-trigger"}],
+  "patch": {"trigger": {"type": "click", "selector": "#select-patch"}, "ack": {"type": "attribute_change", "selector": "#fixture-select", "attribute": "data-revision"}},
+  "expectations": [
+    {"probe": "node_identity", "selector": "#fixture-select-popup", "after": "same"},
+    {"probe": "popover", "selector": "#fixture-select-popup", "before": {"open": true}, "after": {"open": true}},
+    {"probe": "focus", "selector": "#fixture-select-option-YWxwaGE", "before": {"active": true}, "after": {"active": true}},
+    {"probe": "attribute", "selector": "#fixture-select-trigger", "attribute": "aria-expanded", "before": {"value": "true"}, "after": {"value": "true"}}
+  ]
+}

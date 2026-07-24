@@ -18,6 +18,7 @@ test -f "$TMP/package/lib/live_view_continuity/popover.ex"
 test -f "$TMP/package/lib/live_view_continuity/radio_group.ex"
 test -f "$TMP/package/lib/live_view_continuity/switch.ex"
 test -f "$TMP/package/lib/live_view_continuity/checkbox.ex"
+test -f "$TMP/package/lib/live_view_continuity/select.ex"
 test ! -e "$TMP/package/fixture"
 test ! -e "$TMP/package/playwright"
 
@@ -50,6 +51,7 @@ if (!hooks["LiveViewContinuity.Popover.Popover"]) throw new Error("Popover coloc
 if (!hooks["LiveViewContinuity.RadioGroup.RadioGroup"]) throw new Error("RadioGroup colocated hook missing");
 if (!hooks["LiveViewContinuity.Switch.Switch"]) throw new Error("Switch colocated hook missing");
 if (!hooks["LiveViewContinuity.Checkbox.Checkbox"]) throw new Error("Checkbox colocated hook missing");
+if (!hooks["LiveViewContinuity.Select.Select"]) throw new Error("Select colocated hook missing");
 console.log("package hook ok");
 EOF
 

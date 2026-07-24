@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.0 — 2026-07-24
+
+- Add a standalone custom Select with a native form bridge, accessible listbox interaction, optimistic server-authoritative value, and patch-safe identity, focus, and open state.
+- Owner-target all remaining colocated-hook server events for Accordion, Menu, Radio Group, Tabs, and Dialog without changing event names or payloads.
+
 ## 0.9.0 — 2026-07-23
 
 - Add native Checkbox with server-authoritative state, optimistic exact-boolean intent, native forms and reset, synthetic read-only, and retained focus and identity through stale/ABA patches.
